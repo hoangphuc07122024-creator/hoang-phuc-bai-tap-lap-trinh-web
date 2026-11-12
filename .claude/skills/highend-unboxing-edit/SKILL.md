@@ -1,6 +1,6 @@
 ---
 name: highend-unboxing-edit
-description: Dựng/edit video dọc 9:16 theo phong cách "Unboxing Highend Beauty" (TikTok/Reels mỹ phẩm cao cấp) — hook montage cắt nhanh, title serif 3 tầng (Unboxing / Highend / Beauty), nhãn sản phẩm logo + tên, sticker nguyên liệu nhảy theo lời nói, jump cut talking-head, chuyển cảnh cắt cứng. Dùng khi người dùng muốn edit video review/unboxing mỹ phẩm, nước hoa, đồ luxury, hoặc nói "edit theo style highend", "chữ nhảy như video mẫu", "làm video unboxing sang chảnh". Có script ffmpeg để tự render từ footage, và công thức làm tay trong CapCut.
+description: Dựng/edit video dọc 9:16 theo phong cách "Unboxing Highend Beauty" (TikTok/Reels mỹ phẩm cao cấp) — hook montage cắt nhanh, title serif, nhãn sản phẩm logo + tên, sticker nhảy theo lời nói kèm tiếng pop/ding, jump cut cắt khoảng ngừng, phụ đề lời nói, chỉnh mặt tự nhiên (mịn da, xoá nốt ruồi, che hói, make nhẹ). Dùng khi người dùng muốn edit video review/unboxing mỹ phẩm, nước hoa, đồ luxury, hoặc nói "edit theo style highend", "chữ nhảy như video mẫu", "làm video unboxing sang chảnh", "làm mịn da/xoá nốt ruồi trong video". Có script ffmpeg để tự render từ footage, và công thức làm tay trong CapCut.
 ---
 
 # Highend Unboxing Edit
@@ -110,6 +110,26 @@ Overlay có `"shadow": "strong"` khi nền sáng/rối (trần nhà sáng, kệ 
 - Đoạn nói ngập ngừng có từ Whisper kéo dài qua khoảng lặng → dùng `trust_energy` (chỉ dựa năng lượng) để vẫn cắt được.
 - Cắt overlay theo **mốc thời gian trên clip nguồn** rồi quy đổi sang timeline đầu ra bằng script
   sinh plan (cộng dồn thời lượng các clip trước) — tránh tính tay sai lệch.
+
+## Phụ đề lời nói (khi người dùng yêu cầu "soạn text")
+Video mẫu không có phụ đề, nhưng khi được yêu cầu: dùng overlay `caption`, mỗi dòng 3–8 từ, bật/tắt cứng
+đúng lúc câu bắt đầu (không chạy chữ), đặt ở giữa thân (`y` ≈ 0.64, trên nền áo tối, tránh 1/5 dưới cùng là UI TikTok),
+từ khoá bọc trong `*...*` sẽ có màu hồng nhạt. Luôn **soát lại transcript**: Whisper hay nhầm
+"chai"→"trái", "mận"→"mần", "thiết kế"→"thiệt kỳ", "tỉ mỉ"→"tìm mì", "ml"→"miếu", "ví tiền"→"vị tiên", "test"→"tách".
+Viết chú thích hành động trong ngoặc khi không có lời, ví dụ `( xịt thử lên cổ tay )`.
+Phụ đề không được chồng nhau: cắt `end` của dòng trước bằng `start` của dòng sau.
+
+## Chỉnh mặt tự nhiên (retouch)
+`"retouch": {...}` hoặc đường dẫn file JSON trong plan → `scripts/retouch.py` chạy trên video nền **trước khi**
+chèn chữ. Dùng MediaPipe Face Landmarker (`assets/models/face_landmarker.task`) bám mặt từng khung:
+- `smooth` (0.55): làm mịn da bằng bilateral 2 lớp, giữ lại 35% vân da → không bị "da nhựa".
+- `spots`: xoá nốt ruồi/mụn. Tìm toạ độ bằng `retouch.py --locate frame.png X Y`, hoặc gắn thẳng vào một
+  landmark gần nhất (`{"tri": [410,410,410], "bary": [1,0,0], "r": 0.07}`, r tính theo bề rộng miệng).
+- `hairline` (0.6–1.0): che hói/đường ngôi lộ da đầu — tự dò chân tóc, chỉ tô phần da đầu nằm trong mảng tóc
+  (mở/đóng hình thái học + giới hạn dưới đỉnh đầu đã làm mượt, nên tường/đèn phía sau không bị tô).
+- Trang điểm nhẹ: `lip_tint` (0.2), `blush` (0.025 nếu nhân vật đã có má hồng, tối đa ~0.08), `under_eye` (0.06).
+- Luôn thử `--still` trên 3–4 khung khác nhau (nghiêng đầu, tay che mặt) và xem ảnh trước/sau trước khi render cả video.
+- Cài đặt: `pip install mediapipe opencv-python-headless`; nếu thiếu `libEGL.so.1` thì `apt-get install -y libegl1 libgles2`.
 
 ## Công thức làm tay trong CapCut (nếu người dùng tự edit)
 

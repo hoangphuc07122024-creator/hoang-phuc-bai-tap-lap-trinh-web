@@ -168,11 +168,50 @@ def overlay_sticker(W, H, o):
 
 
 def overlay_caption(W, H, o):
+    """Spoken-line caption. Wraps to max_width, centred; words wrapped in *stars* get the accent
+    colour (keywords). y is the vertical centre of the block."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    f = font(SANS, W * o.get("size", 0.045))
-    draw_centered(img, o["text"], f, W / 2, H * o.get("y", 0.2),
-                  tuple(o.get("color", [255, 255, 255, 255])), shadow_of(o))
-    return img
+    f = font(SANS, W * o.get("size", 0.048))
+    base_col = tuple(o.get("color", [255, 255, 255, 255]))
+    acc_col = tuple(o.get("accent", [255, 182, 222, 255]))
+    # tokens: (word, accent?)
+    toks, acc = [], False
+    for part in o["text"].split("*"):
+        for w in part.split():
+            if toks and w[0] in ",.!?;:…)" :
+                toks[-1] = (toks[-1][0] + w, toks[-1][1])   # punctuation sticks to the previous word
+            else:
+                toks.append((w, acc))
+        acc = not acc
+    d = ImageDraw.Draw(img)
+    space = d.textlength(" ", font=f)
+    maxw = W * o.get("max_width", 0.84)
+    lines, cur, cw = [], [], 0.0
+    for w, a in toks:
+        ww = d.textlength(w, font=f)
+        if cur and cw + space + ww > maxw:
+            lines.append((cur, cw)); cur, cw = [], 0.0
+        cw = cw + (space if cur else 0) + ww
+        cur.append((w, a, ww))
+    if cur:
+        lines.append((cur, cw))
+    asc, desc = f.getmetrics()
+    lh = (asc + desc) * 1.12
+    y = H * o.get("y", 0.64) - lh * len(lines) / 2
+    sh = shadow_of(o)
+    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow)
+    for words, lw in lines:
+        x = (W - lw) / 2
+        for w, a, ww in words:
+            sd.text((x, y + sh["dy"]), w, font=f, fill=sh["color"])
+            d.text((x, y), w, font=f, fill=acc_col if a else base_col)
+            x += ww + space
+        y += lh
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    out.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(sh["blur"])))
+    out.alpha_composite(img)
+    return out
 
 
 def build_overlays(plan, W, H, fps, tmp):
@@ -195,9 +234,15 @@ def build_overlays(plan, W, H, fps, tmp):
         else:
             sys.exit(f"unknown overlay type: {t}")
         for j, (im, a, b) in enumerate(imgs):
+            # crop to the visible pixels: overlaying a small PNG at x,y is many times faster than
+            # compositing a full 1080x1920 frame per text/sticker
+            bbox = im.getchannel("A").getbbox()
+            if not bbox:
+                continue
+            x0, y0 = bbox[0] & ~1, bbox[1] & ~1
             p = os.path.join(tmp, f"ov_{i}_{j}.png")
-            im.save(p)
-            out.append((p, a, b))
+            im.crop((x0, y0, bbox[2], bbox[3])).save(p)
+            out.append((p, a, b, x0, y0))
     return out
 
 
@@ -274,18 +319,41 @@ def main():
     output = p(plan.get("output", "out.mp4"))
     tmp = tempfile.mkdtemp(prefix="hue_")
     try:
-        parts = [normalize_clip(c, i, W, H, fps, tmp) for i, c in enumerate(plan["clips"])]
-        lst = os.path.join(tmp, "list.txt")
-        with open(lst, "w") as fh:
-            fh.writelines(f"file '{x}'\n" for x in parts)
-        base = os.path.join(tmp, "base.mov")
-        run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst,
-             "-c", "copy", base])
+        # cache the (slow) cut + retouch base so text-only tweaks re-render in a fraction of the time
+        import hashlib
+        rcfg = None
+        if plan.get("retouch"):
+            rcfg = plan["retouch"] if isinstance(plan["retouch"], dict) else json.load(open(p(plan["retouch"])))
+        key = hashlib.sha1(json.dumps([plan["clips"], rcfg, W, H, fps], sort_keys=True,
+                                      default=str).encode()).hexdigest()[:16]
+        cache_dir = os.path.join(base_dir, ".render_cache")
+        cached = os.path.join(cache_dir, f"base_{key}.mov")
+        if os.path.exists(cached) and not plan.get("no_cache"):
+            print("using cached base", cached)
+            base = cached
+        else:
+            parts = [normalize_clip(c, i, W, H, fps, tmp) for i, c in enumerate(plan["clips"])]
+            lst = os.path.join(tmp, "list.txt")
+            with open(lst, "w") as fh:
+                fh.writelines(f"file '{x}'\n" for x in parts)
+            base = os.path.join(tmp, "base.mov")
+            run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst,
+                 "-c", "copy", base])
+            if rcfg:
+                # face retouch runs on the clean base, before any text/sticker is composited
+                sys.path.insert(0, HERE)
+                import retouch
+                rt = os.path.join(tmp, "base_rt.mov")
+                retouch.process_video(base, rt, rcfg)
+                base = rt
+            os.makedirs(cache_dir, exist_ok=True)
+            shutil.copy(base, cached)
 
         ovs = build_overlays(plan, W, H, fps, tmp)
         cmd = ["ffmpeg", "-y", "-v", "error", "-i", base]
-        for png, _, _ in ovs:
-            cmd += ["-loop", "1", "-framerate", str(fps), "-i", png]
+        for png, a, b, *_ in ovs:
+            # each still only exists for its own on-screen time (shifted into place below)
+            cmd += ["-loop", "1", "-framerate", str(fps), "-t", f"{max(b - a, 1.0 / fps):.3f}", "-i", png]
         music = plan.get("music")
         if music:
             cmd += ["-stream_loop", "-1", "-i", p(music)]
@@ -294,10 +362,10 @@ def main():
         for v in vos:
             cmd += ["-ss", str(v["in"]), "-to", str(v["out"]), "-i", p(v["src"])]
         chain, last = [], "0:v"
-        for k, (_, a, b) in enumerate(ovs, start=1):
+        for k, (_, a, b, ox, oy) in enumerate(ovs, start=1):
             nxt = f"v{k}"
-            chain.append(f"[{last}][{k}:v]overlay=0:0:shortest=1:"
-                         f"enable='between(t,{a:.3f},{b:.3f})'[{nxt}]")
+            chain.append(f"[{k}:v]setpts=PTS+{a:.3f}/TB[s{k}];[{last}][s{k}]overlay={ox}:{oy}:eof_action=pass:"
+                         f"enable='between(t,{a:.3f},{b - 0.5 / fps:.3f})'[{nxt}]")
             last = nxt
         if not chain:
             chain.append("[0:v]null[v0]")
