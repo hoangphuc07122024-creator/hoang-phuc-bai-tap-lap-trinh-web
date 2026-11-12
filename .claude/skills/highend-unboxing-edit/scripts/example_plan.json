@@ -1,0 +1,32 @@
+{
+  "output": "unboxing_final.mp4",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "music": "music.mp3",
+  "music_volume": 0.12,
+  "clips": [
+    {"src": "broll_unbox.mov", "in": 2.10, "out": 2.40, "mute": true},
+    {"src": "broll_unbox.mov", "in": 5.00, "out": 5.20, "mute": true},
+    {"src": "broll_unbox.mov", "in": 8.30, "out": 8.57, "mute": true},
+    {"src": "broll_unbox.mov", "in": 11.0, "out": 11.24, "mute": true},
+    {"src": "broll_unbox.mov", "in": 14.2, "out": 14.53, "mute": true},
+    {"src": "broll_unbox.mov", "in": 17.0, "out": 17.23, "mute": true},
+    {"src": "talking.mov", "in": 0.00, "out": 2.64},
+    {"src": "broll_unbox.mov", "in": 20.0, "out": 20.20, "mute": true},
+    {"src": "broll_unbox.mov", "in": 22.5, "out": 22.67, "mute": true},
+    {"src": "broll_unbox.mov", "in": 25.1, "out": 25.34, "mute": true},
+    {"src": "broll_unbox.mov", "in": 28.0, "out": 28.33, "mute": true},
+    {"src": "broll_unbox.mov", "in": 31.0, "out": 31.30, "mute": true},
+    {"src": "broll_unbox.mov", "in": 33.0, "out": 33.43, "mute": true},
+    {"src": "talking.mov", "in": 3.10, "out": 8.90},
+    {"src": "talking.mov", "in": 9.40, "out": 14.20}
+  ],
+  "overlays": [
+    {"type": "title", "start": 5.95, "end": 8.55, "top": "Unboxing", "main": "Highend", "bottom": "Beauty"},
+    {"type": "product", "start": 11.68, "end": 14.78, "brand": "Maison", "name": "Kem Dưỡng Tay Le Baume Limited"},
+    {"type": "sticker", "start": 15.00, "end": 15.43, "image": "stickers/perfume.png", "x": 0.25, "y": 0.13, "w": 0.18},
+    {"type": "sticker", "start": 15.60, "end": 15.83, "image": "stickers/rose.png", "x": 0.42, "y": 0.10, "w": 0.15},
+    {"type": "sticker", "start": 16.00, "end": 16.33, "image": "stickers/jasmine.png", "x": 0.42, "y": 0.10, "w": 0.16}
+  ]
+}
