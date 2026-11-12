@@ -204,7 +204,7 @@ def build_overlays(plan, W, H, fps, tmp):
 def normalize_clip(c, idx, W, H, fps, tmp):
     src = c["src"]
     t_in, t_out = float(c.get("in", 0)), c.get("out")
-    dst = os.path.join(tmp, f"clip_{idx:04d}.mp4")
+    dst = os.path.join(tmp, f"clip_{idx:04d}.mov")
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
           f"setsar=1,fps={fps}")
     if c.get("hflip"):
@@ -214,18 +214,26 @@ def normalize_clip(c, idx, W, H, fps, tmp):
     if c.get("grade", True):
         # soft warm-neutral "beige daylight" look of the reference
         vf += ",eq=contrast=0.97:saturation=0.92:brightness=0.01,colorbalance=rm=0.03:bm=-0.03"
-    cmd = ["ffmpeg", "-y", "-v", "error", "-ss", str(t_in)]
-    if t_out is not None:
-        cmd += ["-to", str(float(t_out))]
-    cmd += ["-i", src]
+    # Every segment is cut to an exact whole number of frames, and its audio to exactly the
+    # same length in PCM. (AAC intermediates get ~20 ms of padding per segment; across dozens of
+    # 0.25 s montage shots that drifts the voice 0.5 s+ out of lip-sync.)
+    speed = float(c.get("speed") or 1.0)
+    src_dur = (float(t_out) if t_out is not None else float(run([
+        "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", src]))) - t_in
+    n_frames = max(1, round(src_dur / speed * fps))
+    n_samples = round(n_frames / fps * 48000)
+    cmd = ["ffmpeg", "-y", "-v", "error", "-ss", str(t_in), "-t", f"{src_dur + 0.2:.3f}", "-i", src]
     audio = has_audio(src) and not c.get("mute")
     if not audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-    cmd += ["-vf", vf, "-map", "0:v:0", "-map", "0:a:0" if audio else "1:a:0"]
-    if audio and c.get("speed"):
-        cmd += ["-af", f"atempo={float(c['speed'])}"]
-    cmd += ["-shortest", "-c:v", "libx264", "-preset", "veryfast", "-crf", "16",
-            "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", dst]
+    af = []
+    if audio and speed != 1.0:
+        af.append(f"atempo={speed}")
+    af += ["aresample=48000", "aformat=channel_layouts=stereo", "apad",
+           f"atrim=end_sample={n_samples}", "asetpts=PTS-STARTPTS"]
+    cmd += ["-vf", vf, "-af", ",".join(af), "-map", "0:v:0", "-map", "0:a:0" if audio else "1:a:0",
+            "-frames:v", str(n_frames), "-c:v", "libx264", "-preset", "veryfast", "-crf", "16",
+            "-pix_fmt", "yuv420p", "-video_track_timescale", str(fps * 512), "-c:a", "pcm_s16le", dst]
     run(cmd)
     return dst
 
@@ -261,7 +269,7 @@ def main():
         lst = os.path.join(tmp, "list.txt")
         with open(lst, "w") as fh:
             fh.writelines(f"file '{x}'\n" for x in parts)
-        base = os.path.join(tmp, "base.mp4")
+        base = os.path.join(tmp, "base.mov")
         run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst,
              "-c", "copy", base])
 

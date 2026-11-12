@@ -91,6 +91,14 @@ Overlay có `"shadow": "strong"` khi nền sáng/rối (trần nhà sáng, kệ 
   nếu thư viện tải bị treo; nạp audio bằng numpy (đọc file wav 16kHz) nếu PyAV lỗi.
 - **Thiếu ảnh sticker:** vẽ sticker phẳng đơn giản bằng Pillow (quả, hoa, ánh lấp lánh) theo đúng từ khoá
   trong lời nói — vẫn đúng tinh thần hơn là bỏ trống.
+- **"Cắt đoạn thừa" = 2 tầng:** (1) bỏ câu lặp ý (câu mở đầu nói lại, câu tự sửa, "ờ/à"), (2) cắt mọi
+  khoảng ngừng >0.3s bên trong câu. Đo khoảng ngừng bằng năng lượng âm thanh tương đối với nền ồn
+  (ngưỡng = phân vị 10% + 10 dB, bước 50ms) và **chỉ cắt khi không có từ Whisper nào rơi vào**
+  (tránh cắt mất tiếng nói nhỏ cuối câu). Giữ 80ms đuôi mỗi mảnh. Sau render chạy
+  `silencedetect=n=-40dB:d=0.35` trên file ra — không được còn khoảng lặng nào.
+- Montage có lồng tiếng: độ dài montage phải ≈ độ dài câu lồng (bớt/thêm cảnh), nếu không sẽ có khoảng im.
+- Kiểm tra đồng bộ: số khung video ra phải bằng tổng số khung các clip (script đã cắt đúng khung + PCM;
+  đừng đổi đoạn trung gian sang AAC/MKV — gây lệch tiếng tích luỹ).
 - Cắt overlay theo **mốc thời gian trên clip nguồn** rồi quy đổi sang timeline đầu ra bằng script
   sinh plan (cộng dồn thời lượng các clip trước) — tránh tính tay sai lệch.
 
