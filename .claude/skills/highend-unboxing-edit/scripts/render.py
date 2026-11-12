@@ -90,6 +90,12 @@ def draw_centered(layer, text, f, cx, cy, fill, shadow=None):
 
 
 SOFT = {"dy": 3, "blur": 6, "color": (0, 0, 0, 90)}
+# for bright/busy backgrounds (light ceilings, shop shelves): plan "shadow": "strong"
+STRONG = {"dy": 3, "blur": 9, "color": (0, 0, 0, 170)}
+
+
+def shadow_of(o):
+    return STRONG if o.get("shadow") == "strong" else SOFT
 
 
 def overlay_title(W, H, o):
@@ -98,11 +104,11 @@ def overlay_title(W, H, o):
     color = tuple(o.get("color", [255, 255, 255, 255]))
     y = o.get("y", 0.175)  # vertical centre of the main word, as fraction of H
     main_f = fit_font(SERIF_ITALIC, o["main"], W * o.get("main_width", 0.55), weight=800)
-    box = draw_centered(img, o["main"], main_f, W / 2, H * y, color, SOFT)
+    box = draw_centered(img, o["main"], main_f, W / 2, H * y, color, shadow_of(o))
     mh = box[3] - box[1]
     if o.get("top"):
         top_f = fit_font(SERIF, o["top"], W * o.get("top_width", 0.34), weight=400)
-        draw_centered(img, o["top"], top_f, W / 2, box[1] - mh * 0.30, color, SOFT)
+        draw_centered(img, o["top"], top_f, W / 2, box[1] - mh * 0.30, color, shadow_of(o))
     if o.get("bottom"):
         bot_f = font(SERIF, top_f.size * 0.62 if o.get("top") else mh * 0.3, 400)
         d = ImageDraw.Draw(img)
@@ -110,6 +116,11 @@ def overlay_title(W, H, o):
         # right edge pokes slightly past "Highend", sitting on its baseline (overlap is intended)
         x = box[2] + W * 0.075 - (r - l) - l
         yy = box[3] - (b - t) * 0.85 - t
+        sh = shadow_of(o)
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(layer).text((x, yy + sh["dy"]), o["bottom"], font=bot_f, fill=sh["color"])
+        img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(sh["blur"])))
+        d = ImageDraw.Draw(img)
         d.text((x, yy), o["bottom"], font=bot_f, fill=color)
     return img
 
@@ -142,7 +153,7 @@ def overlay_product(W, H, o, part="both"):
         if f.getbbox(o["name"])[2] > W * 0.9:
             f = fit_font(SANS, o["name"], W * 0.9, start=int(size))
         draw_centered(img, o["name"], f, W / 2, logo_bottom + H * 0.028,
-                      (255, 255, 255, 255), SOFT)
+                      (255, 255, 255, 255), shadow_of(o))
     return img
 
 
@@ -160,7 +171,7 @@ def overlay_caption(W, H, o):
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     f = font(SANS, W * o.get("size", 0.045))
     draw_centered(img, o["text"], f, W / 2, H * o.get("y", 0.2),
-                  tuple(o.get("color", [255, 255, 255, 255])), SOFT)
+                  tuple(o.get("color", [255, 255, 255, 255])), shadow_of(o))
     return img
 
 
@@ -196,6 +207,8 @@ def normalize_clip(c, idx, W, H, fps, tmp):
     dst = os.path.join(tmp, f"clip_{idx:04d}.mp4")
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
           f"setsar=1,fps={fps}")
+    if c.get("hflip"):
+        vf = "hflip," + vf  # selfie-camera footage is mirrored: un-mirror so logos read correctly
     if c.get("speed"):
         vf += f",setpts=PTS/{float(c['speed'])}"
     if c.get("grade", True):
@@ -231,6 +244,9 @@ def main():
 
     for c in plan["clips"]:
         c["src"] = p(c["src"])
+        c.setdefault("hflip", plan.get("hflip", False))
+    for v in plan.get("voiceovers", []):
+        v["src"] = p(v["src"])
     for o in plan.get("overlays", []):
         for k in ("logo", "image"):
             if o.get(k):
@@ -256,6 +272,10 @@ def main():
         music = plan.get("music")
         if music:
             cmd += ["-stream_loop", "-1", "-i", p(music)]
+        # voiceovers: audio taken from a source file and laid over muted montage clips
+        vos = plan.get("voiceovers", [])
+        for v in vos:
+            cmd += ["-ss", str(v["in"]), "-to", str(v["out"]), "-i", p(v["src"])]
         chain, last = [], "0:v"
         for k, (_, a, b) in enumerate(ovs, start=1):
             nxt = f"v{k}"
@@ -265,14 +285,29 @@ def main():
         if not chain:
             chain.append("[0:v]null[v0]")
             last = "v0"
+        mix = ["[0:a]"]
+        nxt_in = len(ovs) + 1
         if music:
-            m = len(ovs) + 1
             vol = plan.get("music_volume", 0.12)
-            chain.append(f"[{m}:a]volume={vol}[bg];[0:a][bg]amix=inputs=2:duration=first:"
-                         f"dropout_transition=0:normalize=0[aout]")
-            amap = "[aout]"
+            chain.append(f"[{nxt_in}:a]volume={vol}[bg]")
+            mix.append("[bg]")
+            nxt_in += 1
+        for k, v in enumerate(vos):
+            ms = int(round(float(v["start"]) * 1000))
+            chain.append(f"[{nxt_in + k}:a]aresample=48000,aformat=channel_layouts=stereo,"
+                         f"volume={v.get('volume', 1.0)},adelay={ms}|{ms}[vo{k}]")
+            mix.append(f"[vo{k}]")
+        if len(mix) > 1:
+            chain.append("".join(mix) + f"amix=inputs={len(mix)}:duration=first:"
+                         "dropout_transition=0:normalize=0[amx]")
         else:
-            amap = "0:a"
+            chain.append("[0:a]anull[amx]")
+        # TikTok/Reels play back around -14 LUFS; phone voice recordings are often far quieter
+        if plan.get("loudnorm", True):
+            chain.append("[amx]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]")
+        else:
+            chain.append("[amx]anull[aout]")
+        amap = "[aout]"
         cmd += ["-filter_complex", ";".join(chain), "-map", f"[{last}]", "-map", amap,
                 "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", output]

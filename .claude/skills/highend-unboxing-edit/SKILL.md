@@ -70,7 +70,29 @@ Font gợi ý trong CapCut nếu không có Playfair: *Bodoni*, *Didot*, *Gloock
 {"type": "caption", "start": 20, "end": 22, "text": "Mùi hương hoa nhài", "y": 0.2}
 ```
 Tuỳ chọn plan: `width/height/fps` (mặc định 1080×1920@30), `music` + `music_volume` (mặc định 0.12),
-mỗi clip có `speed`, `mute`, `grade: false` (tắt màu be ấm). Đường dẫn tương đối tính từ file plan.
+`loudnorm` (mặc định bật, chuẩn −14 LUFS cho TikTok), `hflip` (lật gương toàn bộ),
+`voiceovers` (lồng tiếng), mỗi clip có `speed`, `mute`, `hflip`, `grade: false` (tắt màu be ấm).
+Overlay có `"shadow": "strong"` khi nền sáng/rối (trần nhà sáng, kệ cửa hàng). Đường dẫn tương đối tính từ file plan.
+
+```json
+"voiceovers": [{"src": "talking.mov", "in": 0.82, "out": 2.62, "start": 0.0, "volume": 1.0}]
+```
+
+### Kinh nghiệm từ các lần dựng thực tế
+- **Footage quay camera trước thường bị lật gương** (chữ trên hộp/túi đọc ngược). Luôn kiểm tra
+  chữ trên sản phẩm trong contact sheet; nếu ngược → `"hflip": true`.
+- **Montage bị im lặng là lỗi lớn khi không có nhạc nền.** Dùng J-cut: tắt tiếng clip montage,
+  lấy chính câu nói của đoạn talking-head kế tiếp làm `voiceovers` chạy dưới montage, rồi clip
+  talking-head bắt đầu từ `in + thời lượng montage` để khẩu hình khớp tiếng.
+- **Có nhiều take giống nhau:** transcript tất cả (faster-whisper `medium`, `language="vi"`,
+  `word_timestamps=True`), chọn câu nói trôi nhất cho từng ý, cắt theo mốc từng từ. Nếu mô hình
+  bị lặp câu (hallucination), chạy lại với `condition_on_previous_text=False` và bỏ `initial_prompt`.
+  Tải model bằng `curl` từ `huggingface.co/Systran/faster-whisper-medium/resolve/main/{config.json,model.bin,tokenizer.json,vocabulary.txt}`
+  nếu thư viện tải bị treo; nạp audio bằng numpy (đọc file wav 16kHz) nếu PyAV lỗi.
+- **Thiếu ảnh sticker:** vẽ sticker phẳng đơn giản bằng Pillow (quả, hoa, ánh lấp lánh) theo đúng từ khoá
+  trong lời nói — vẫn đúng tinh thần hơn là bỏ trống.
+- Cắt overlay theo **mốc thời gian trên clip nguồn** rồi quy đổi sang timeline đầu ra bằng script
+  sinh plan (cộng dồn thời lượng các clip trước) — tránh tính tay sai lệch.
 
 ## Công thức làm tay trong CapCut (nếu người dùng tự edit)
 
