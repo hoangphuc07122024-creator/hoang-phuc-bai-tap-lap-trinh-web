@@ -255,6 +255,15 @@ def main():
         c.setdefault("hflip", plan.get("hflip", False))
     for v in plan.get("voiceovers", []):
         v["src"] = p(v["src"])
+    # "sfx" on an overlay = a sound the moment it pops in ("pop", "ding", "whoosh" or a file path)
+    SFX = os.path.join(HERE, "..", "assets", "sfx")
+    for o in plan.get("overlays", []):
+        if o.get("sfx"):
+            f = o["sfx"]
+            f = os.path.join(SFX, f + ".wav") if os.path.exists(os.path.join(SFX, f + ".wav")) else p(f)
+            plan.setdefault("voiceovers", []).append(
+                {"src": f, "in": 0, "out": 5, "start": float(o["start"]) + float(o.get("sfx_offset", 0)),
+                 "volume": o.get("sfx_volume", 0.35)})
     for o in plan.get("overlays", []):
         for k in ("logo", "image"):
             if o.get(k):

@@ -69,6 +69,11 @@ Font gợi ý trong CapCut nếu không có Playfair: *Bodoni*, *Didot*, *Gloock
 {"type": "sticker", "start": 43.2, "end": 43.6, "image": "rose.png", "x": 0.3, "y": 0.12, "w": 0.18}
 {"type": "caption", "start": 20, "end": 22, "text": "Mùi hương hoa nhài", "y": 0.2}
 ```
+**Tiếng cho chữ/sticker:** thêm `"sfx": "pop" | "ding" | "whoosh" | "duong/dan.wav"` (và `sfx_volume`, mặc định 0.35)
+vào overlay bất kỳ — tiếng phát đúng frame chữ bật lên. Quy ước: tiêu đề & nhãn sản phẩm = `ding`,
+sticker = `pop`. Tiếng được tổng hợp sẵn trong `assets/sfx/` (tạo lại bằng `scripts/make_sfx.py`, không dùng sample bản quyền).
+Tiêu đề có thể bỏ dòng `bottom` (chỉ 2 tầng) khi người dùng đưa câu tiêu đề riêng, ví dụ
+`"top": "Mới nhận lương", "main": "Unbox liền"`.
 Tuỳ chọn plan: `width/height/fps` (mặc định 1080×1920@30), `music` + `music_volume` (mặc định 0.12),
 `loudnorm` (mặc định bật, chuẩn −14 LUFS cho TikTok), `hflip` (lật gương toàn bộ),
 `voiceovers` (lồng tiếng), mỗi clip có `speed`, `mute`, `hflip`, `grade: false` (tắt màu be ấm).
@@ -99,6 +104,10 @@ Overlay có `"shadow": "strong"` khi nền sáng/rối (trần nhà sáng, kệ 
 - Montage có lồng tiếng: độ dài montage phải ≈ độ dài câu lồng (bớt/thêm cảnh), nếu không sẽ có khoảng im.
 - Kiểm tra đồng bộ: số khung video ra phải bằng tổng số khung các clip (script đã cắt đúng khung + PCM;
   đừng đổi đoạn trung gian sang AAC/MKV — gây lệch tiếng tích luỹ).
+- Khi người dùng muốn **"để nhân vật nói"**: giữ hook B-roll ở mức 3–4 cảnh (~1s), bỏ các montage giữa
+  video, thay bằng chính đoạn talking-head cầm/mở sản phẩm. Phần cảm nhận lấy đủ các ý (lý do mua, mùi,
+  mùa dùng, màu, thiết kế, dung tích) và gắn sticker cho mỗi từ khoá hình ảnh (mận, đông/hè, lấp lánh).
+- Đoạn nói ngập ngừng có từ Whisper kéo dài qua khoảng lặng → dùng `trust_energy` (chỉ dựa năng lượng) để vẫn cắt được.
 - Cắt overlay theo **mốc thời gian trên clip nguồn** rồi quy đổi sang timeline đầu ra bằng script
   sinh plan (cộng dồn thời lượng các clip trước) — tránh tính tay sai lệch.
 
