@@ -131,6 +131,15 @@ chèn chữ. Dùng MediaPipe Face Landmarker (`assets/models/face_landmarker.tas
 - Luôn thử `--still` trên 3–4 khung khác nhau (nghiêng đầu, tay che mặt) và xem ảnh trước/sau trước khi render cả video.
 - Cài đặt: `pip install mediapipe opencv-python-headless`; nếu thiếu `libEGL.so.1` thì `apt-get install -y libegl1 libgles2`.
 
+## Bàn giao để người dùng sửa tiếp trong CapCut
+1. Render bản sạch: copy plan, đặt `"overlays": []` (giữ `voiceovers`, `retouch`) → video đã cắt + chỉnh mặt + có tiếng, không chữ.
+2. `python3 scripts/export_capcut.py plan.json out_dir video_sach.mp4` → `phu_de.srt` (CapCut nhập được),
+   `lop_chu/*.png` full khung trong suốt, tên file chứa giây bắt đầu–kết thúc, `moc_thoi_gian.csv`, `HUONG_DAN_CAPCUT.txt`.
+3. Nén zip và gửi. Không thể mở CapCut trên máy người dùng — nói rõ điều đó và đưa gói này.
+- Video nền (cắt + chỉnh mặt) được cache trong `.render_cache/` cạnh plan: các bản chỉ khác chữ/sticker/tiếng render lại ~2 phút.
+- Sticker ảnh thật: nguồn tải được trong môi trường này là HuggingFace (ví dụ dataset `VinayHajare/Fruits-30`, Apache-2.0);
+  chọn ảnh nền trắng, tách nền bằng GrabCut (OpenCV), thêm bóng đổ mềm. Tiếng nhẹ thay thế: `shimmer` (sticker), `soft` (chữ).
+
 ## Công thức làm tay trong CapCut (nếu người dùng tự edit)
 
 1. Canvas 9:16. Kéo B-roll vào, Split cắt mỗi đoạn 6–10 frame (0.2–0.33s), xếp 6–7 đoạn đầu video.
