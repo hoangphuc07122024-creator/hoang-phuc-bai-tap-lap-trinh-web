@@ -258,6 +258,16 @@ def normalize_clip(c, idx, W, H, fps, tmp):
         vf = "hflip," + vf  # selfie-camera footage is mirrored: un-mirror so logos read correctly
     if c.get("speed"):
         vf += f",setpts=PTS/{float(c['speed'])}"
+    stab_trf = None
+    if c.get("stabilize"):
+        # handheld B-roll: vidstab pass 1 (motion analysis) on exactly this segment, pass 2 applied below
+        stab_trf = os.path.join(tmp, f"stab_{idx:04d}.trf")
+        sd = (float(c["out"]) - t_in) if c.get("out") is not None else 30
+        run(["ffmpeg", "-v", "error", "-y", "-ss", str(t_in), "-t", f"{sd + 0.2:.3f}", "-i", src, "-vf",
+             vf + f",vidstabdetect=shakiness=6:accuracy=12:stepsize=6:result={stab_trf}", "-an", "-f", "null", "-"])
+        sm = int(c.get("stab_smoothing", 18))
+        vf += (f",vidstabtransform=input={stab_trf}:smoothing={sm}:optzoom=1:zoomspeed=0.2:interpol=bicubic"
+               ",unsharp=5:5:0.5:5:5:0")
     if c.get("zoom"):
         # slow push-in / pull-out over the clip (Ken Burns) - keeps B-roll alive without a "transition"
         z0, z1 = c["zoom"]
