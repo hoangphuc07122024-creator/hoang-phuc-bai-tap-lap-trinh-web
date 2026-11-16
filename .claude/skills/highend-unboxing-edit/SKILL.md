@@ -111,6 +111,16 @@ Overlay có `"shadow": "strong"` khi nền sáng/rối (trần nhà sáng, kệ 
 - Cắt overlay theo **mốc thời gian trên clip nguồn** rồi quy đổi sang timeline đầu ra bằng script
   sinh plan (cộng dồn thời lượng các clip trước) — tránh tính tay sai lệch.
 
+## Kiểu "vui nhộn" (khi người dùng muốn bớt nghiêm, thêm năng lượng)
+Video mẫu là pop cứng, không animation. Khi được yêu cầu "vui nhộn hơn":
+- Overlay `"anim": "bounce"` (caption/title/product): nảy vào 0.5→1.12→1.0 trong ~0.32 s rồi đứng yên.
+- Sticker `"anim": "wobble"`: nảy vào + lắc lư/nhún nhẹ suốt thời gian hiện.
+- Sticker emoji: render từ Noto Color Emoji (`/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf`, size 109, `embedded_color=True`),
+  phóng x4, thêm bóng mềm. Gắn theo nghĩa lời: 🎁 quà, 🛍️ nhiều set, ✨ điểm cộng, 💼🥂💕 đi làm/tiệc/hẹn hò,
+  🔥 cá tính, 🌶️🍫 tiêu cay/cacao, 🌿 bạc hà, 🍬 caramel, 😍 cuốn hút, 🌊 tươi mát. Đặt y≈0.30, tránh mặt người.
+- Clip `"punch": [giây trong clip]`: cú zoom giật nhẹ (+7%, nhả trong ~0.2 s) đúng lúc nhắc tên sản phẩm.
+- Hỏi trước khi gắn tiếng cho sticker — nhiều người thấy tiếng pop lặp lại gây khó chịu.
+
 ## Phụ đề lời nói (khi người dùng yêu cầu "soạn text")
 Video mẫu không có phụ đề, nhưng khi được yêu cầu: dùng overlay `caption`, mỗi dòng 3–8 từ, bật/tắt cứng
 đúng lúc câu bắt đầu (không chạy chữ), đặt ở giữa thân (`y` ≈ 0.64, trên nền áo tối, tránh 1/5 dưới cùng là UI TikTok),

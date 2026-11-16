@@ -216,6 +216,45 @@ def overlay_caption(W, H, o):
     return out
 
 
+def _anim_scale(u):
+    """pop-in with overshoot: 0.5 -> 1.12 -> 0.97 -> 1.0 over ~0.32 s"""
+    if u < 0.12:
+        k = u / 0.12; return 0.5 + 0.62 * (1 - (1 - k) ** 2)
+    if u < 0.24:
+        return 1.12 - 0.15 * (u - 0.12) / 0.12
+    if u < 0.32:
+        return 0.97 + 0.03 * (u - 0.24) / 0.08
+    return 1.0
+
+
+def render_anim(im, kind, dur, fps, path):
+    """Animated overlay -> short .mov (png codec, alpha). kind: 'bounce' (pop-in) | 'wobble' (pop-in + sway)."""
+    import math
+    w, h = im.size
+    m = int(max(w, h) * (0.35 if kind == "wobble" else 0.12)) + 4
+    cw, ch = (w + 2 * m) & ~1, (h + 2 * m) & ~1
+    n = max(1, round(dur * fps))
+    ff = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{cw}x{ch}",
+                           "-r", str(fps), "-i", "-", "-c:v", "png", "-pix_fmt", "rgba", path], stdin=subprocess.PIPE)
+    for k in range(n):
+        u = k / fps
+        sc = _anim_scale(u)
+        fr = im.resize((max(1, int(w * sc)), max(1, int(h * sc))), Image.LANCZOS)
+        dy = 0
+        if kind == "wobble":
+            ang = 9 * math.sin(2 * math.pi * 1.8 * u) * math.exp(-u / 1.5)
+            fr = fr.rotate(ang, resample=Image.BICUBIC, expand=True)
+            dy = -6 * math.sin(2 * math.pi * 1.1 * u)
+        a = min(1.0, u / 0.06)
+        if a < 1:
+            fr.putalpha(fr.getchannel("A").point(lambda v: int(v * a)))
+        c = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+        c.alpha_composite(fr, (int((cw - fr.width) / 2), int((ch - fr.height) / 2 + dy)))
+        ff.stdin.write(c.tobytes())
+    ff.stdin.close(); ff.wait()
+    return m
+
+
 def build_overlays(plan, W, H, fps, tmp):
     """Returns list of (png_path, start, end)."""
     out = []
@@ -242,9 +281,21 @@ def build_overlays(plan, W, H, fps, tmp):
             if not bbox:
                 continue
             x0, y0 = bbox[0] & ~1, bbox[1] & ~1
+            crop = im.crop((x0, y0, bbox[2], bbox[3]))
             p = os.path.join(tmp, f"ov_{i}_{j}.png")
-            im.crop((x0, y0, bbox[2], bbox[3])).save(p)
-            out.append((p, a, b, x0, y0))
+            crop.save(p)
+            kind = o.get("anim")
+            if kind == "wobble":                     # whole life animated
+                mv = os.path.join(tmp, f"ov_{i}_{j}.mov")
+                mg = render_anim(crop, "wobble", b - a, fps, mv)
+                out.append((mv, a, b, x0 - mg, y0 - mg))
+            elif kind == "bounce" and b - a > 0.4:   # 0.35 s pop-in clip, then the static still
+                mv = os.path.join(tmp, f"ov_{i}_{j}.mov")
+                mg = render_anim(crop, "bounce", 0.35, fps, mv)
+                out.append((mv, a, a + 0.35, x0 - mg, y0 - mg))
+                out.append((p, a + 0.35, b, x0, y0))
+            else:
+                out.append((p, a, b, x0, y0))
     return out
 
 
@@ -268,11 +319,13 @@ def normalize_clip(c, idx, W, H, fps, tmp):
         sm = int(c.get("stab_smoothing", 18))
         vf += (f",vidstabtransform=input={stab_trf}:smoothing={sm}:optzoom=1:zoomspeed=0.2:interpol=bicubic"
                ",unsharp=5:5:0.5:5:5:0")
-    if c.get("zoom"):
+    if c.get("zoom") or c.get("punch"):
         # slow push-in / pull-out over the clip (Ken Burns) - keeps B-roll alive without a "transition"
-        z0, z1 = c["zoom"]
+        z0, z1 = c.get("zoom") or (1.0, 1.0)
         d = max((float(c["out"]) - t_in) / float(c.get("speed") or 1.0), 1.0 / fps)
         z = f"({z0}+({z1}-{z0})*min(t/{d:.3f},1))"
+        for pt in c.get("punch", []):             # quick "zoom hit" at clip-relative times (fun emphasis)
+            z += f"+0.07*gte(t,{pt:.3f})*exp(-(t-{pt:.3f})/0.2)*min((t-{pt:.3f})/0.05,1)"
         vf += (f",scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame,crop={W}:{H}")
     if c.get("eq"):
         vf += "," + c["eq"]           # per-clip exposure fix, e.g. "eq=gamma=1.3:saturation=1.05"
@@ -373,7 +426,10 @@ def main():
         cmd = ["ffmpeg", "-y", "-v", "error", "-i", base]
         for png, a, b, *_ in ovs:
             # each still only exists for its own on-screen time (shifted into place below)
-            cmd += ["-loop", "1", "-framerate", str(fps), "-t", f"{max(b - a, 1.0 / fps):.3f}", "-i", png]
+            if png.endswith(".mov"):
+                cmd += ["-c:v", "png", "-i", png]          # animated overlay (keeps alpha)
+            else:
+                cmd += ["-loop", "1", "-framerate", str(fps), "-t", f"{max(b - a, 1.0 / fps):.3f}", "-i", png]
         music = plan.get("music")
         if music:
             cmd += ["-stream_loop", "-1", "-i", p(music)]
