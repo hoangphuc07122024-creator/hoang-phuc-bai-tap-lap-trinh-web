@@ -142,8 +142,10 @@ def overlay_product(W, H, o, part="both"):
         logo_bottom = yy + logo.height
     elif o.get("brand"):
         f = fit_font(DIDONE, o["brand"], W * o.get("logo_width", 0.40), weight=500)
-        box = draw_centered(scratch, o["brand"], f, W / 2, H * y_logo,
-                            tuple(o.get("brand_color", [40, 38, 36, 255])))
+        bcol = tuple(o.get("brand_color", [40, 38, 36, 255]))
+        # light text gets a dark shadow, dark text a soft light halo -> readable on any background
+        bsh = shadow_of(o) if sum(bcol[:3]) > 380 else {"dy": 0, "blur": 10, "color": (255, 255, 255, 170)}
+        box = draw_centered(scratch, o["brand"], f, W / 2, H * y_logo, bcol, bsh if o.get("shadow") else None)
         logo_bottom = box[3]
     if part in ("both", "logo"):
         img.alpha_composite(scratch)
@@ -256,6 +258,12 @@ def normalize_clip(c, idx, W, H, fps, tmp):
         vf = "hflip," + vf  # selfie-camera footage is mirrored: un-mirror so logos read correctly
     if c.get("speed"):
         vf += f",setpts=PTS/{float(c['speed'])}"
+    if c.get("zoom"):
+        # slow push-in / pull-out over the clip (Ken Burns) - keeps B-roll alive without a "transition"
+        z0, z1 = c["zoom"]
+        d = max((float(c["out"]) - t_in) / float(c.get("speed") or 1.0), 1.0 / fps)
+        z = f"({z0}+({z1}-{z0})*min(t/{d:.3f},1))"
+        vf += (f",scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame,crop={W}:{H}")
     if c.get("grade", True):
         # soft warm-neutral "beige daylight" look of the reference
         vf += ",eq=contrast=0.97:saturation=0.92:brightness=0.01,colorbalance=rm=0.03:bm=-0.03"
