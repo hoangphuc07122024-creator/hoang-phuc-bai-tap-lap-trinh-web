@@ -264,6 +264,8 @@ def normalize_clip(c, idx, W, H, fps, tmp):
         d = max((float(c["out"]) - t_in) / float(c.get("speed") or 1.0), 1.0 / fps)
         z = f"({z0}+({z1}-{z0})*min(t/{d:.3f},1))"
         vf += (f",scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame,crop={W}:{H}")
+    if c.get("eq"):
+        vf += "," + c["eq"]           # per-clip exposure fix, e.g. "eq=gamma=1.3:saturation=1.05"
     if c.get("grade", True):
         # soft warm-neutral "beige daylight" look of the reference
         vf += ",eq=contrast=0.97:saturation=0.92:brightness=0.01,colorbalance=rm=0.03:bm=-0.03"
@@ -387,7 +389,8 @@ def main():
             nxt_in += 1
         for k, v in enumerate(vos):
             ms = int(round(float(v["start"]) * 1000))
-            chain.append(f"[{nxt_in + k}:a]aresample=48000,aformat=channel_layouts=stereo,"
+            pre = (v["af"] + ",") if v.get("af") else ""   # e.g. denoise / presence EQ / leveller
+            chain.append(f"[{nxt_in + k}:a]{pre}aresample=48000,aformat=channel_layouts=stereo,"
                          f"volume={v.get('volume', 1.0)},adelay={ms}|{ms}[vo{k}]")
             mix.append(f"[vo{k}]")
         if len(mix) > 1:
