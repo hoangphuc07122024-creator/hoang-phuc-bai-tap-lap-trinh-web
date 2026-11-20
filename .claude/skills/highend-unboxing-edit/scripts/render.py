@@ -305,6 +305,10 @@ def normalize_clip(c, idx, W, H, fps, tmp):
     dst = os.path.join(tmp, f"clip_{idx:04d}.mov")
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
           f"setsar=1,fps={fps}")
+    if c.get("crop_frac"):
+        # punch into a region of the source (x, y, w, h as fractions) - e.g. a close-up from 4K footage
+        x, y, w, h = c["crop_frac"]
+        vf = f"crop=iw*{w}:ih*{h}:iw*{x}:ih*{y}," + vf
     if c.get("hflip"):
         vf = "hflip," + vf  # selfie-camera footage is mirrored: un-mirror so logos read correctly
     if c.get("speed"):
