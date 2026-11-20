@@ -228,10 +228,10 @@ def _anim_scale(u):
 
 
 def render_anim(im, kind, dur, fps, path):
-    """Animated overlay -> short .mov (png codec, alpha). kind: 'bounce' (pop-in) | 'wobble' (pop-in + sway)."""
+    """Animated overlay -> short .mov (png codec, alpha). kind: 'bounce' (pop-in) | 'wobble' (pop-in + sway) | 'zoom' (hero reveal)."""
     import math
     w, h = im.size
-    m = int(max(w, h) * (0.35 if kind == "wobble" else 0.12)) + 4
+    m = int(max(w, h) * {"wobble": 0.35, "zoom": 0.1}.get(kind, 0.12)) + 4
     cw, ch = (w + 2 * m) & ~1, (h + 2 * m) & ~1
     n = max(1, round(dur * fps))
     ff = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{cw}x{ch}",
@@ -239,6 +239,9 @@ def render_anim(im, kind, dur, fps, path):
     for k in range(n):
         u = k / fps
         sc = _anim_scale(u)
+        if kind == "zoom":                       # hero reveal: grows from small to full, then slow push-in
+            k = min(1.0, u / 0.55); e = 1 + 2.2 * (k - 1) ** 3 + 1.2 * (k - 1) ** 2   # ease-out-back
+            sc = (0.25 + 0.75 * e) * (1 + 0.06 * u / max(dur, 0.1))
         fr = im.resize((max(1, int(w * sc)), max(1, int(h * sc))), Image.LANCZOS)
         dy = 0
         if kind == "wobble":
@@ -285,9 +288,9 @@ def build_overlays(plan, W, H, fps, tmp):
             p = os.path.join(tmp, f"ov_{i}_{j}.png")
             crop.save(p)
             kind = o.get("anim")
-            if kind == "wobble":                     # whole life animated
+            if kind in ("wobble", "zoom"):           # whole life animated
                 mv = os.path.join(tmp, f"ov_{i}_{j}.mov")
-                mg = render_anim(crop, "wobble", b - a, fps, mv)
+                mg = render_anim(crop, kind, b - a, fps, mv)
                 out.append((mv, a, b, x0 - mg, y0 - mg))
             elif kind == "bounce" and b - a > 0.4:   # 0.35 s pop-in clip, then the static still
                 mv = os.path.join(tmp, f"ov_{i}_{j}.mov")

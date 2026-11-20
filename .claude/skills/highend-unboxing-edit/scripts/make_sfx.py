@@ -103,6 +103,15 @@ def correct():            # bright rising "ting-ting-ting-TING" + sparkle tail
     parts += [(0.3 + rng.uniform(0, 0.5), _bell(rng.uniform(3000, 6000), 0.2, 0.04, ((1, 1),)), 0.25) for _ in range(10)]
     return _place(1.3, parts)
 
+def correct_bell():       # quiz-show "da-DING!": quick pickup note into a big bright bell chord + sparkle
+    chord = [1047, 1319, 1568, 2093]
+    parts = [(0.0, _bell(784, 0.18, 0.05, ((1, 1), (2, .4))), 0.7)]
+    parts += [(0.11, _bell(f, 1.4, 0.55, ((1, 1), (2.0, .3), (3.0, .12), (4.2, .06))), 0.75 - 0.1 * k)
+              for k, f in enumerate(chord)]
+    rng = np.random.default_rng(4)
+    parts += [(0.15 + rng.uniform(0, 0.7), _bell(rng.uniform(4000, 7500), 0.15, 0.03, ((1, 1),)), 0.18) for _ in range(14)]
+    return _place(1.6, parts)
+
 def wrong():              # classic quiz buzzer: two harsh low blasts
     def blast(d):
         t = np.arange(int(d * SR)) / SR
@@ -125,5 +134,5 @@ def sad_trombone():       # "wah wah wah waaah"
 
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "sfx")
-    for name, fn in [("correct", correct), ("wrong", wrong), ("sad_trombone", sad_trombone)]:
+    for name, fn in [("correct", correct), ("correct_bell", correct_bell), ("wrong", wrong), ("sad_trombone", sad_trombone)]:
         save(os.path.join(out, name + ".wav"), fn()); print("wrote", name)
