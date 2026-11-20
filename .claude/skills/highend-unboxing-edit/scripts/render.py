@@ -330,6 +330,7 @@ def normalize_clip(c, idx, W, H, fps, tmp):
         z = f"({z0}+({z1}-{z0})*min(t/{d:.3f},1))"
         for pt in c.get("punch", []):             # quick "zoom hit" at clip-relative times (fun emphasis)
             z += f"+0.07*gte(t,{pt:.3f})*exp(-(t-{pt:.3f})/0.2)*min((t-{pt:.3f})/0.05,1)"
+        z = f"({z})"                               # keep the whole zoom factor grouped (punch terms included)
         vf += (f",scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame,crop={W}:{H}")
     if c.get("eq"):
         vf += "," + c["eq"]           # per-clip exposure fix, e.g. "eq=gamma=1.3:saturation=1.05"
@@ -470,7 +471,8 @@ def main():
             chain.append("[0:a]anull[amx]")
         # TikTok/Reels play back around -14 LUFS; phone voice recordings are often far quieter
         if plan.get("loudnorm", True):
-            chain.append("[amx]loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[aout]")
+            pre = (plan["master_af"] + ",") if plan.get("master_af") else ""   # e.g. dynaudnorm to lift quiet talk
+            chain.append(f"[amx]{pre}loudnorm=I={plan.get('loudness', -14)}:TP=-1.0:LRA=11,aresample=48000[aout]")
         else:
             chain.append("[amx]anull[aout]")
         amap = "[aout]"

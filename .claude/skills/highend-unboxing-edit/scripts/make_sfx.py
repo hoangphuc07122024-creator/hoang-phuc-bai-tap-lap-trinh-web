@@ -92,3 +92,38 @@ if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "sfx")
     for name, fn in [("ting_ting", ting_ting), ("coins", coins), ("kaching", kaching), ("pay_beep", pay_beep), ("whoosh_fast", whoosh_fast)]:
         save(os.path.join(out, name + ".wav"), fn()); print("wrote", name)
+
+
+# ---- game show sounds ("đoán đúng / đoán sai") ----
+def correct():            # bright rising "ting-ting-ting-TING" + sparkle tail
+    notes = [(0.00, 1047), (0.09, 1319), (0.18, 1568), (0.27, 2093)]
+    parts = [(t0, _bell(f, 0.9 if k == 3 else 0.35, 0.35 if k == 3 else 0.12, ((1, 1), (2, .35), (3, .12))), 0.9)
+             for k, (t0, f) in enumerate(notes)]
+    rng = np.random.default_rng(9)
+    parts += [(0.3 + rng.uniform(0, 0.5), _bell(rng.uniform(3000, 6000), 0.2, 0.04, ((1, 1),)), 0.25) for _ in range(10)]
+    return _place(1.3, parts)
+
+def wrong():              # classic quiz buzzer: two harsh low blasts
+    def blast(d):
+        t = np.arange(int(d * SR)) / SR
+        x = np.sign(np.sin(2 * np.pi * 155 * t)) * 0.6 + np.sign(np.sin(2 * np.pi * 157.5 * t)) * 0.4
+        x = np.convolve(x, np.ones(6) / 6, "same")
+        return x * np.minimum(1, np.minimum(t, d - t) / 0.01)
+    return _place(0.75, [(0, blast(0.28), 0.8), (0.36, blast(0.36), 0.8)])
+
+def sad_trombone():       # "wah wah wah waaah"
+    out = []
+    t0 = 0.0; parts = []
+    for k, (f, d) in enumerate([(392, 0.38), (370, 0.38), (349, 0.38), (330, 1.1)]):
+        t = np.arange(int(d * SR)) / SR
+        fm = f * (1 + (0.012 * np.sin(2 * np.pi * 6 * t) if k == 3 else 0))
+        ph = 2 * np.pi * np.cumsum(fm) / SR
+        x = sum(a * np.sin(h * ph) for h, a in ((1, 1), (2, .6), (3, .4), (4, .25), (5, .15)))
+        env = np.minimum(1, t / 0.04) * np.minimum(1, (d - t) / 0.08) * (1 - 0.3 * np.exp(-t / 0.05))
+        parts.append((t0, x * env, 0.5)); t0 += d + 0.03
+    return _place(t0 + 0.1, parts)
+
+if __name__ == "__main__":
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "sfx")
+    for name, fn in [("correct", correct), ("wrong", wrong), ("sad_trombone", sad_trombone)]:
+        save(os.path.join(out, name + ".wav"), fn()); print("wrote", name)
