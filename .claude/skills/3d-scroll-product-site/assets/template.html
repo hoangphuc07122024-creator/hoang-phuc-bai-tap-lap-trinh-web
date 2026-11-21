@@ -303,7 +303,7 @@ CHAPTERS.forEach((c, i) => {
 master.set({}, {}, 1);   // chốt tổng thời lượng = 1 để progress cuộn ánh xạ 1:1
 ScrollTrigger.create({ start:0, end:'max', scrub, animation:master });
 // intro + hero: trả nền về màu giấy (khi cuộn ngược hoặc nhảy thẳng lên đầu)
-ScrollTrigger.create({ trigger:'#intro', start:'top top', endTrigger:'#hero', end:'bottom 50%',
+ScrollTrigger.create({ start:-1, endTrigger:'#hero', end:'bottom 50%',   // start:-1 => vị trí 0 cũng tính là 'trong'
   onToggle: s => { if (s.isActive) document.body.style.backgroundColor = ''; } });
 
 /* ======================= 6. RENDER LOOP ======================= */

@@ -312,21 +312,26 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8bc, 1.6));
 const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(4, 6, 8); scene.add(key);
 const rim = new THREE.DirectionalLight(0xffe8dc, 1.2); rim.position.set(-6, 2, -4); scene.add(rim);
 
-// --- lõi dầu: gradient dọc + bóng mờ của đầu cọ bên trong (giả hiệu ứng nhìn xuyên kính)
+// --- dầu son trong suốt: gradient ngang cho khối trụ (mép đậm, giữa sáng), KHÔNG vẽ đầu cọ
+//     vì đầu cọ giờ là mesh thật nằm bên trong, nhìn xuyên qua lớp dầu
 function oilTexture(color){
-  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 8;
   const g = c.getContext('2d'), base = new THREE.Color(color);
   const css = k => '#' + base.clone().multiplyScalar(k).getHexString();
-  const gr = g.createLinearGradient(0,0,512,0);   // sáng giữa, tối mép => khối trụ
-  gr.addColorStop(0, css(.55)); gr.addColorStop(.42, css(1.15)); gr.addColorStop(.6, css(1)); gr.addColorStop(1, css(.5));
-  g.fillStyle = gr; g.fillRect(0,0,512,512);
-  // thân cọ + đầu cọ cong (doe-foot), đặt ở 1/4 chu vi mặt trước
-  g.fillStyle = css(.72); g.globalAlpha = .55;
-  g.fillRect(100,0,56,300);
-  g.beginPath(); g.ellipse(120,380,52,110,.25,0,Math.PI*2); g.fill();
-  g.globalAlpha = 1;
+  const gr = g.createLinearGradient(0,0,256,0);
+  gr.addColorStop(0, css(.5)); gr.addColorStop(.35, css(1.15)); gr.addColorStop(.6, css(.95)); gr.addColorStop(1, css(.45));
+  g.fillStyle = gr; g.fillRect(0,0,256,8);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+// --- vệt sáng dọc trên kính (giống vệt phản chiếu trong ảnh sản phẩm)
+const shineTex = (() => {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 4;
+  const g = c.getContext('2d'), gr = g.createLinearGradient(0,0,64,0);
+  gr.addColorStop(0,'rgba(255,255,255,0)'); gr.addColorStop(.35,'rgba(255,255,255,.85)');
+  gr.addColorStop(.55,'rgba(255,255,255,.55)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0,0,64,4);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
 // --- son dưỡng dạng dầu, tỉ lệ theo ảnh thật: nắp vàng 33% · đai vàng 14% · thân màu 45% · đế kính 8%
 const R = .42, H = 3.0;
 // Vàng champagne: dùng matcap tự vẽ thay vì metalness (kim loại PBR bị tối/olive khi env tối).
@@ -349,18 +354,42 @@ function makeTube(color){
     m.position.y = y + h/2; g.add(m); return m;
   };
   const hBase = .24, hBody = 1.35, hBand = .42, hCap = H - hBase - hBody - hBand;
-  // đế kính dày trong suốt
-  seg(hBase, y0, new THREE.MeshPhysicalMaterial({ color:0xf2f2f2, transparent:true, opacity:.55, roughness:.02, clearcoat:1, envMapIntensity:2 }));
-  // lõi dầu màu + vỏ kính bóng bên ngoài
-  const core = g.userData.core = seg(hBody, y0+hBase, new THREE.MeshPhysicalMaterial({ map:oilTexture(color), roughness:.25 }), R*.96);
-  core.rotation.y = -Math.PI/2;
-  seg(hBody, y0+hBase, new THREE.MeshPhysicalMaterial({ color:0xffffff, transparent:true, opacity:.08, roughness:.02,
-    clearcoat:1, envMapIntensity:2.4, depthWrite:false }), R, true);
+  const yBody = y0 + hBase, yTopBody = yBody + hBody;
+
+  // 1) cọ bên trong (vẽ trước, đục): thân trắng + đầu cọ cong màu son
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.075, .075, hBody*.62, 24),
+    new THREE.MeshStandardMaterial({ color:0xf4f1f2, roughness:.35 }));
+  stem.position.set(-.05, yTopBody - hBody*.31, .02); g.add(stem);
+  const tip = new THREE.Mesh(new THREE.CapsuleGeometry(.13, .38, 8, 24),
+    new THREE.MeshStandardMaterial({ color:new THREE.Color(color).multiplyScalar(.8), roughness:.85 }));
+  tip.scale.set(1, 1, .55); tip.rotation.z = .35;
+  tip.position.set(-.1, yBody + .42, .02); g.add(tip);
+
+  // 2) dầu màu trong suốt (nhìn xuyên thấy cọ)
+  //    dùng MeshBasic (không chịu ánh sáng) để màu dầu đúng như ảnh, bóng loáng do lớp kính lo
+  const core = seg(hBody, yBody, new THREE.MeshBasicMaterial({
+    map:oilTexture(color), transparent:true, opacity:.86, toneMapped:false, depthWrite:false }), R*.95);
+  core.rotation.y = -Math.PI/2; core.renderOrder = 2;
+  g.userData.core = core; g.userData.tip = tip;
+
+  // 3) vỏ kính: gần như trong suốt, chỉ còn phản chiếu
+  const shell = seg(hBody + hBase, y0, new THREE.MeshPhysicalMaterial({ color:0xffffff, transparent:true, opacity:.05,
+    roughness:0, clearcoat:1, envMapIntensity:1, depthWrite:false }), R, true);
+  shell.renderOrder = 3;
+  // 4) đế kính dày, trong
+  const base = seg(hBase, y0, new THREE.MeshPhysicalMaterial({ color:0xeef3f4, transparent:true, opacity:.32,
+    roughness:0, clearcoat:1, envMapIntensity:2.5, depthWrite:false }), R*.97);
+  base.renderOrder = 2;
+  // 5) vệt sáng dọc: luôn quay về phía camera (xem render loop)
+  const shine = new THREE.Mesh(new THREE.CylinderGeometry(R*1.01, R*1.01, hBody + hBase*.8, 32, 1, true, -1.05, .5),
+    new THREE.MeshBasicMaterial({ map:shineTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:.4 }));
+  shine.position.y = y0 + (hBody + hBase)/2 + .02; shine.renderOrder = 4; g.add(shine);
+  g.userData.shine = shine;
+
   // đai vàng + rãnh tối + nắp vàng
-  seg(hBand, y0+hBase+hBody, GOLD());
-  seg(.025, y0+hBase+hBody+hBand, new THREE.MeshStandardMaterial({ color:0x3a2c1a, roughness:.6 }), R*1.002);
-  const cap = seg(hCap - .025, y0+hBase+hBody+hBand+.025, GOLD());
-  // mặt trên nắp hơi lõm sáng
+  seg(hBand, yTopBody, GOLD());
+  seg(.025, yTopBody + hBand, new THREE.MeshStandardMaterial({ color:0x3a2c1a, roughness:.6 }), R*1.002);
+  seg(hCap - .025, yTopBody + hBand + .025, GOLD());
   const top = new THREE.Mesh(new THREE.CircleGeometry(R*.96, 72), GOLD());
   top.rotation.x = -Math.PI/2; top.position.y = H/2 + .001; g.add(top);
   return g;
@@ -495,7 +524,7 @@ CHAPTERS.forEach((c, i) => {
 master.set({}, {}, 1);   // chốt tổng thời lượng = 1 để progress cuộn ánh xạ 1:1
 ScrollTrigger.create({ start:0, end:'max', scrub, animation:master });
 // intro + hero: trả nền về màu giấy (khi cuộn ngược hoặc nhảy thẳng lên đầu)
-ScrollTrigger.create({ trigger:'#intro', start:'top top', endTrigger:'#hero', end:'bottom 50%',
+ScrollTrigger.create({ start:-1, endTrigger:'#hero', end:'bottom 50%',   // start:-1 => vị trí 0 cũng tính là 'trong'
   onToggle: s => { if (s.isActive) document.body.style.backgroundColor = ''; } });
 
 /* ======================= 6. RENDER LOOP ======================= */
@@ -530,6 +559,7 @@ renderer.setAnimationLoop(() => {
     m.position.set(p.x*L.xs + mouse.x*.3*(p.z*.3), p.y + idle, p.z);
     m.rotation.set(p.rx + mouse.y*.2, p.ry, p.rz + (i===0 ? sway : 0));
     m.scale.setScalar(p.s * Math.max(L.xs, .7));
+    m.userData.shine.rotation.y = -m.rotation.y;   // vệt sáng đứng yên theo camera
   });
   // con lắc: tuýp 0 treo dưới điểm neo phía trên màn hình
   const LEN = 7, p0 = S.tubes[0];
@@ -569,7 +599,8 @@ renderer.setAnimationLoop(() => {
 // màu chai / nền / chuyển cảnh / hạt, ảnh từng tông. 3D cập nhật ngay.
 // "Lưu" ghi vào trình duyệt này (localStorage). "Tải file HTML" xuất một index.html mới chứa nội dung đã sửa.
 const ED = {
-  setTube(i){ const m = tubes[i].userData.core.material; m.map.dispose(); m.map = oilTexture(CHAPTERS[i].tube); m.needsUpdate = true; },
+  setTube(i){ const u = tubes[i].userData, m = u.core.material; m.map.dispose(); m.map = oilTexture(CHAPTERS[i].tube); m.needsUpdate = true;
+    u.tip.material.color.set(CHAPTERS[i].tube).multiplyScalar(.8); },
   setParticle(i){ fields[i].material.color.set(CHAPTERS[i].pColor); },
   setWordmark(){
     const m = wordmark.material; m.map.dispose(); m.map = wordmarkTexture(BRAND.name, BRAND.wordmarkColor); m.needsUpdate = true;
