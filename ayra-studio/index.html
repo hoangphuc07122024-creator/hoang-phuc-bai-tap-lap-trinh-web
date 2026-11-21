@@ -616,6 +616,7 @@ panel.innerHTML = `
     <p class="ed-status" aria-live="polite"></p>
     <button type="button" data-act="save" class="ed-primary">Lưu</button>
     <button type="button" data-act="export">Tải file HTML</button>
+    <button type="button" data-act="copy">Sao chép mã HTML</button>
     <button type="button" data-act="reset" class="ed-danger">Khôi phục mặc định</button>
   </footer>`;
 document.body.append(panel);
@@ -690,19 +691,35 @@ panel.addEventListener('click', e => {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(CONTENT)); dirty = false; say('Đã lưu trong trình duyệt này.'); }
     catch { say('Không lưu được (có thể do ảnh quá lớn). Hãy dùng "Tải file HTML".'); }
   }
+  if (act === 'copy') {
+    navigator.clipboard.writeText(exportHTML())
+      .then(() => say('Đã sao chép. Dán vào file index.html mới (đặt cạnh thư mục img/).'))
+      .catch(() => say('Trình duyệt chặn sao chép. Hãy dùng "Tải file HTML" khi mở trang trên máy.'));
+  }
   if (act === 'export') {
-    const json = JSON.stringify(CONTENT, null, 1).replace(/<\//g, '<\\/');
-    const html = PAGE_SOURCE.replace(/(<script id="content" type="application\/json">)[\s\S]*?(<\/script>)/, `$1\n${json}\n$2`);
+    const html = exportHTML();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([html], { type:'text/html' }));
     a.download = 'index.html'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     say('Đã tải file. Đặt cạnh thư mục img/ để ảnh mặc định hiển thị.');
   }
-  if (act === 'reset' && confirm('Xoá mọi chỉnh sửa và quay về nội dung gốc?')) {
-    try { localStorage.removeItem(STORE_KEY); } catch {}
-    dirty = false; location.reload();
+  // xác nhận 2 lần bấm ngay trên nút (không dùng confirm(): một số trình xem chặn hộp thoại)
+  if (act === 'reset') {
+    const btn = e.target;
+    if (btn.dataset.armed) {
+      try { localStorage.removeItem(STORE_KEY); } catch {}
+      dirty = false; location.reload();
+    } else {
+      btn.dataset.armed = '1'; btn.textContent = 'Bấm lần nữa để xoá mọi chỉnh sửa';
+      setTimeout(() => { delete btn.dataset.armed; btn.textContent = 'Khôi phục mặc định'; }, 4000);
+    }
   }
 });
+function exportHTML(){
+  const json = JSON.stringify(CONTENT, null, 1).replace(/<\//g, '<\\/');
+  return PAGE_SOURCE.replace(/(<script id="content" type="application\/json">)[\s\S]*?(<\/script>)/, () =>
+    `<script id="content" type="application/json">\n${json}\n<\/script>`);
+}
 addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 </script>
 </body>
