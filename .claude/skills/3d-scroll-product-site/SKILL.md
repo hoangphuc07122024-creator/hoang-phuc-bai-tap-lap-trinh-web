@@ -78,7 +78,12 @@ cảnh "cho vào giỏ". Mẫu khởi đầu chạy được ngay nằm ở `ass
 - **Tiếng Việt:** `line-height:.85` khiến dấu dưới (ọ, ậ) dính vào dấu trên của dòng sau (ú, à)
   và trông như bị mất dấu. Với headline nhiều dòng, dùng `line-height` ≥ 1.05.
 - Vật liệu kim loại (nắp son) cần `scene.environment` (RoomEnvironment + PMREM), nếu không sẽ
-  bị đen. Khi import `three/addons/` thì phải thêm khoá này vào importmap.
+  bị đen. Khi import `three/addons/` thì phải thêm khoá này vào importmap. Nếu vàng vẫn ra màu
+  olive hoặc nâu, chuyển sang `MeshMatcapMaterial` với matcap tự vẽ bằng canvas (gradient ngang
+  có một dải sáng): ánh kim nhìn giống ảnh chụp sản phẩm ở mọi góc xoay.
+- **Khi người dùng gửi ảnh sản phẩm thật:** lấy tỉ lệ các khối (nắp/đai/thân/đế) và màu từ ảnh
+  để dựng mô hình procedural, rồi đặt chính các ảnh đó vào thẻ social proof thay cho ảnh mẫu.
+- Tên có gạch nối (sô-cô-la) sẽ bị ngắt dòng ở dấu "-" khi dùng headline to. Hãy dùng U+2011.
 - Khi làm trang cho đại lý bán sản phẩm của hãng khác: thương hiệu trên trang là của cửa hàng,
   không dùng logo của hãng trên mô hình 3D, và thêm dòng ghi chú nhãn hiệu ở cuối trang.
 - `prefers-reduced-motion`: tắt wipe, tắt idle và dùng `scrub:true`.
