@@ -47,7 +47,7 @@
   .copy p{font-size:14px;line-height:1.4;max-width:280px;color:var(--muted)}
   .chips{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap}
   .chips span{font-size:11px;padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.7)}
-  .cta{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border:0;border-radius:99px;
+  .cta{display:inline-flex;align-items:center;gap:10px;user-select:none;background:var(--ink);color:#fff;border:0;border-radius:99px;
        padding:10px 10px 10px 18px;font:500 13px Inter,sans-serif;cursor:pointer}
   .cta b{background:#fff;color:var(--ink);border-radius:99px;padding:3px 8px;font-size:11px}
   .chapter.right .pin{align-items:flex-end;text-align:right}
@@ -78,6 +78,40 @@
     .chapter .pin,#bag .pin{justify-content:flex-end;padding-bottom:72px} .chapter.right .pin{align-items:flex-start;text-align:left}
     .chapter.right .chips{justify-content:flex-start} #bag .copy{margin-left:0!important} .receipt{left:16px;width:120px} }
   @media (prefers-reduced-motion:reduce){ #wipe{display:none} }
+  /* ===== chế độ sửa ===== */
+  #ed-toggle{position:fixed;right:20px;bottom:20px;z-index:30;border:0;border-radius:99px;padding:10px 16px;
+    background:var(--ink);color:#fff;font:500 13px Inter,sans-serif;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  #ed-panel{position:fixed;top:0;right:0;bottom:0;width:min(320px,92vw);z-index:25;background:#fffdfb;color:var(--ink);
+    border-left:1px solid #eadfd9;box-shadow:-20px 0 40px rgba(0,0,0,.08);font:13px/1.4 Inter,sans-serif;
+    display:flex;flex-direction:column;overflow:auto;transform:translateX(105%);transition:transform .25s ease}
+  body.editing #ed-panel{transform:none}
+  body.editing{padding-right:0}
+  #ed-panel header{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 4px}
+  #ed-panel header button{border:0;background:none;font-size:16px;cursor:pointer;color:var(--muted)}
+  .ed-tip{padding:0 16px 8px;color:var(--muted);font-size:12px}
+  #ed-panel details{border-top:1px solid #f0e7e2;padding:8px 16px}
+  #ed-panel summary{cursor:pointer;font-weight:600;padding:4px 0}
+  .ed-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
+  .ed-row.ed-col{flex-direction:column;align-items:stretch;gap:4px}
+  .ed-row span{color:#5b4f4b;font-size:12px}
+  .ed-row input[type=text]{border:1px solid #e3d8d2;border-radius:8px;padding:7px 9px;font:inherit;background:#fff}
+  .ed-row input[type=color]{width:44px;height:28px;border:1px solid #e3d8d2;border-radius:6px;padding:0;background:none;cursor:pointer}
+  .ed-row input[type=file]{font-size:11px}
+  .ed-link{border:0;background:none;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;padding:4px 0}
+  #ed-panel footer{margin-top:auto;padding:12px 16px 72px;border-top:1px solid #f0e7e2;display:grid;gap:8px}
+  #ed-panel footer button{border:1px solid #e3d8d2;background:#fff;border-radius:99px;padding:9px;font:500 13px Inter,sans-serif;cursor:pointer}
+  #ed-panel footer .ed-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  #ed-panel footer .ed-danger{color:#a3122c}
+  .ed-status{font-size:12px;color:var(--muted);min-height:1.4em}
+  body.editing section [data-k],body.editing nav [data-k]{pointer-events:auto;outline:1px dashed rgba(122,31,53,.45);outline-offset:3px;border-radius:2px;cursor:text}
+  body.editing [data-k]:focus{outline:2px solid var(--accent);background:rgba(255,255,255,.55)}
+  body.editing .cta{pointer-events:auto}
+  @media (max-width:640px){
+    #ed-panel{top:auto;height:45vh;width:100vw;transform:translateY(105%);border-left:0;border-top:1px solid #eadfd9}
+    /* đang sửa trên điện thoại: đẩy chữ lên nửa trên để không bị bảng che */
+    body.editing .chapter .pin,body.editing #bag .pin{justify-content:flex-start;padding-top:72px}
+    body.editing #ed-toggle{bottom:calc(45vh + 12px)} }
+
 </style>
 </head>
 <body>
@@ -85,25 +119,114 @@
 <div id="wipe"></div>
 
 <nav>
-  <div class="logo">Ayra <span>Studio</span></div>
+  <div class="logo"><b data-k="brand.logo"></b> <span data-k="brand.logoSub"></span></div>
   <ul data-nav></ul>
   <div class="bag">0</div>
 </nav>
 
-<section id="intro"><div class="pin"><div class="hint">Cuộn xuống</div></div></section>
-<section id="hero"><div class="pin"><p class="tagline" data-tagline></p></div></section>
+<section id="intro"><div class="pin"><div class="hint" data-k="brand.hint"></div></div></section>
+<section id="hero"><div class="pin"><p class="tagline" data-k="brand.tagline"></p></div></section>
 <div id="chapters"></div>
 <section id="bag"><div class="pin">
-  <div class="receipt" id="receipt"><div>AYRA STUDIO</div><div class="big">800K</div><div class="bar"></div>
-    <div>SON DƯỠNG CLARINS</div><div>1 × ...... 800.000₫</div><div>TỔNG ..... 800.000₫</div></div>
+  <div class="receipt" id="receipt"><div data-k="bag.receiptTop"></div><div class="big" data-k="bag.receiptBig"></div><div class="bar"></div>
+    <div data-list="bag.receiptLines"></div></div>
   <div class="copy" style="margin-left:14vw">
-    <div class="eyebrow">Ayra Studio</div>
-    <h2>Gói trọn<br>vào túi.</h2>
-    <p>Chọn tông bạn thương. Mỗi thỏi son dưỡng Clarins giá 800.000₫.</p><br>
-    <button class="cta">Mua ngay <b>800.000₫</b></button>
+    <div class="eyebrow" data-k="bag.eyebrow"></div>
+    <h2 data-k="bag.title" data-multi></h2>
+    <p data-k="bag.text"></p><br>
+    <div class="cta" role="button" tabindex="0"><span data-k="bag.cta"></span> <b data-price></b></div>
   </div>
-  <p class="legal">Clarins là nhãn hiệu thuộc chủ sở hữu tương ứng. Ayra Studio là cửa hàng bán lẻ, trang demo cho bài tập lập trình web.</p>
+  <p class="legal" data-k="bag.legal"></p>
 </div></section>
+
+<!-- Toàn bộ nội dung trang. Chế độ "Sửa" ghi đè bản này (localStorage) hoặc xuất ra file mới. -->
+<script id="content" type="application/json">
+{
+ "brand": {
+  "name": "ayra",
+  "logo": "Ayra",
+  "logoSub": "Studio",
+  "tagline": "Son dưỡng Clarins: mềm môi như mật, bóng nhẹ như vừa thoa dầu.",
+  "wordmarkColor": "#2a1a1d",
+  "price": "800.000₫",
+  "handle": "ayra.studio",
+  "bag": "#3a1620",
+  "bagText": "#f3e4dc",
+  "hint": "Cuộn xuống",
+  "ctaAdd": "Thêm vào giỏ"
+ },
+ "chapters": [
+  {
+   "id": "fuchsia",
+   "title": "Hồng fuchsia",
+   "eyebrow": "01 · Fuchsia",
+   "text": "Hồng tím rực, trong veo như thạch. Bờ môi bóng căng chỉ sau một lần thoa.",
+   "chips": [
+    "Dưỡng mềm",
+    "Bóng gương",
+    "Lên màu nhẹ"
+   ],
+   "bg": "#f8dfea",
+   "tube": "#b8135e",
+   "wipe": "#a10d52",
+   "particle": "berry",
+   "pColor": "#c2186a",
+   "side": "left",
+   "img": "img/fuchsia.webp"
+  },
+  {
+   "id": "cherry",
+   "title": "Đỏ anh đào",
+   "eyebrow": "02 · Cherry",
+   "text": "Đỏ anh đào sâu và ngọt, cho đôi môi thêm chút quyến rũ.",
+   "chips": [
+    "Đỏ sâu",
+    "Mềm môi",
+    "Bóng tự nhiên"
+   ],
+   "bg": "#f6dcdc",
+   "tube": "#8e0c17",
+   "wipe": "#6d0710",
+   "particle": "cherry",
+   "pColor": "#a30f1e",
+   "side": "right",
+   "img": "img/cherry.webp"
+  },
+  {
+   "id": "choco",
+   "title": "Nâu sô‑cô‑la",
+   "eyebrow": "03 · Chocolate",
+   "text": "Nâu sô-cô-la ấm, lên môi thành sắc nâu đất mềm mại.",
+   "chips": [
+    "Nâu ấm",
+    "Dưỡng ẩm",
+    "Bóng nhẹ"
+   ],
+   "bg": "#efe2d9",
+   "tube": "#4a160c",
+   "wipe": "#2e0f08",
+   "particle": "shard",
+   "pColor": "#5a2414",
+   "side": "left",
+   "img": "img/chocolate.webp"
+  }
+ ],
+ "bag": {
+  "eyebrow": "Ayra Studio",
+  "title": "Gói trọn\nvào túi.",
+  "text": "Chọn tông bạn thương. Mỗi thỏi son dưỡng Clarins giá 800.000₫.",
+  "cta": "Mua ngay",
+  "receiptTop": "AYRA STUDIO",
+  "receiptBig": "800K",
+  "receiptLines": [
+   "SON DƯỠNG CLARINS",
+   "1 × ...... 800.000₫",
+   "TỔNG ..... 800.000₫"
+  ],
+  "legal": "Clarins là nhãn hiệu thuộc chủ sở hữu tương ứng. Ayra Studio là cửa hàng bán lẻ, trang demo cho bài tập lập trình web."
+ }
+}
+</script>
 
 <script type="importmap">
 { "imports": {
@@ -117,36 +240,61 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-/* ======================= 1. CONTENT — sửa ở đây ======================= */
-const BRAND = { name:'ayra', tagline:'Son dưỡng Clarins: mềm môi như mật, bóng nhẹ như vừa thoa dầu.', wordmarkColor:'#2a1a1d',
-  price:'800.000₫', handle:'ayra.studio', bag:'#3a1620', bagText:'#f3e4dc' };
-// Tên 'Nâu sô‑cô‑la' dùng U+2011 (gạch nối không ngắt dòng).
-// Màu lấy theo ảnh sản phẩm thật (img/*.webp). Tên tông là mô tả màu, KHÔNG phải mã màu chính hãng.
+/* ======================= 1. CONTENT ======================= */
+// Nội dung nằm trong <script id="content">. Nếu người dùng đã bấm "Lưu" ở chế độ Sửa, bản lưu
+// trong localStorage được dùng thay thế. Tên 'Nâu sô‑cô‑la' dùng U+2011 (gạch nối không ngắt dòng).
+// Tên tông là mô tả màu theo ảnh, KHÔNG phải mã màu chính hãng.
 // particle: berry = mâm xôi · cherry = anh đào bóng · shard = mảnh sô-cô-la
-const CHAPTERS = [
-  { id:'fuchsia', title:'Hồng fuchsia', eyebrow:'01 · Fuchsia', text:'Hồng tím rực, trong veo như thạch. Bờ môi bóng căng chỉ sau một lần thoa.',
-    chips:['Dưỡng mềm','Bóng gương','Lên màu nhẹ'], bg:'#f8dfea', tube:'#b8135e', wipe:'#a10d52', particle:'berry',  pColor:'#c2186a', side:'left',  img:'img/fuchsia.webp' },
-  { id:'cherry',  title:'Đỏ anh đào',  eyebrow:'02 · Cherry',  text:'Đỏ anh đào sâu và ngọt, cho đôi môi thêm chút quyến rũ.',
-    chips:['Đỏ sâu','Mềm môi','Bóng tự nhiên'],  bg:'#f6dcdc', tube:'#8e0c17', wipe:'#6d0710', particle:'cherry', pColor:'#a30f1e', side:'right', img:'img/cherry.webp' },
-  { id:'choco',   title:'Nâu sô‑cô‑la', eyebrow:'03 · Chocolate', text:'Nâu sô-cô-la ấm, lên môi thành sắc nâu đất mềm mại.',
-    chips:['Nâu ấm','Dưỡng ẩm','Bóng nhẹ'],     bg:'#efe2d9', tube:'#4a160c', wipe:'#2e0f08', particle:'shard',  pColor:'#5a2414', side:'left',  img:'img/chocolate.webp' },
-];
+const PAGE_SOURCE = '<!doctype html>\n' + document.documentElement.outerHTML;   // chụp trước khi JS sửa DOM
+const DEFAULT_CONTENT = JSON.parse(document.getElementById('content').textContent);
+const STORE_KEY = 'ayra-content-v1';
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch {}
+const CONTENT = saved && saved.chapters?.length === DEFAULT_CONTENT.chapters.length ? saved : structuredClone(DEFAULT_CONTENT);
+const BRAND = CONTENT.brand, CHAPTERS = CONTENT.chapters;
 
 /* ======================= 2. DOM build ======================= */
-document.querySelector('[data-tagline]').textContent = BRAND.tagline;
-document.querySelector('[data-nav]').innerHTML = CHAPTERS.map(c=>`<li>${c.title}</li>`).join('');
-document.getElementById('chapters').innerHTML = CHAPTERS.map(c=>`
+const esc = v => String(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const getPath = k => k.split('.').reduce((o, p) => o?.[p], CONTENT);
+const setPath = (k, v) => { const ps = k.split('.'), last = ps.pop(); ps.reduce((o, p) => o[p], CONTENT)[last] = v; };
+// điền mọi phần tử có data-k / data-list / data-price từ CONTENT
+function fillText(root = document){
+  root.querySelectorAll('[data-k]').forEach(el => {
+    const v = getPath(el.dataset.k) ?? '';
+    if (el.hasAttribute('data-multi')) el.innerHTML = esc(v).replace(/\n/g, '<br>'); else el.textContent = v;
+  });
+  root.querySelectorAll('[data-list]').forEach(el => {
+    const k = el.dataset.list;
+    el.innerHTML = getPath(k).map((x, j) => `<div data-k="${k}.${j}">${esc(x)}</div>`).join('');
+  });
+  fillDerived();
+}
+// những chỗ suy ra từ nội dung khác (giá, tên tông trên thẻ ảnh, menu)
+function fillDerived(){
+  document.querySelectorAll('[data-price]').forEach(el => el.textContent = BRAND.price);
+  document.querySelector('[data-nav]').innerHTML = CHAPTERS.map(c => `<li>${esc(c.title)}</li>`).join('');
+  CHAPTERS.forEach((c, i) => {
+    const card = document.querySelector(`#ch-${c.id} .card`);
+    card.style.setProperty('--c', c.tube);
+    card.querySelector('.cap').textContent = `${c.title} · ${BRAND.price}`;
+    card.querySelector('.handle').textContent = BRAND.handle;
+    const img = card.querySelector('img'); if (img.getAttribute('src') !== c.img) img.src = c.img;
+    img.alt = `Son dưỡng Clarins tông ${c.title}`;
+  });
+}
+document.getElementById('chapters').innerHTML = CHAPTERS.map((c, i) => `
   <section class="chapter ${c.side==='right'?'right':''}" id="ch-${c.id}"><div class="pin">
     <div class="copy">
-      <div class="eyebrow">${c.eyebrow}</div><h2>${c.title}</h2><p>${c.text}</p>
-      <div class="chips">${c.chips.map(x=>`<span>${x}</span>`).join('')}</div>
-      <button class="cta">Thêm vào giỏ <b>${BRAND.price}</b></button>
+      <div class="eyebrow" data-k="chapters.${i}.eyebrow"></div><h2 data-k="chapters.${i}.title"></h2><p data-k="chapters.${i}.text"></p>
+      <div class="chips" data-chips="${i}">${c.chips.map((_, j) => `<span data-k="chapters.${i}.chips.${j}"></span>`).join('')}</div>
+      <div class="cta" role="button" tabindex="0"><span data-k="brand.ctaAdd"></span> <b data-price></b></div>
     </div>
-    <div class="card" style="--c:${c.tube}">
-      <div class="u"><i></i>${BRAND.handle}</div><img class="ph" src="${c.img}" alt="Son dưỡng Clarins tông ${c.title}" loading="lazy">
-      <div>${c.title} · ${BRAND.price}</div>
+    <div class="card">
+      <div class="u"><i></i><span class="handle"></span></div><img class="ph" src="${esc(c.img)}" alt="" loading="lazy">
+      <div class="cap"></div>
     </div>
   </div></section>`).join('');
+fillText();
 
 /* ======================= 3. THREE scene ======================= */
 const canvas = document.getElementById('gl');
@@ -204,7 +352,7 @@ function makeTube(color){
   // đế kính dày trong suốt
   seg(hBase, y0, new THREE.MeshPhysicalMaterial({ color:0xf2f2f2, transparent:true, opacity:.55, roughness:.02, clearcoat:1, envMapIntensity:2 }));
   // lõi dầu màu + vỏ kính bóng bên ngoài
-  const core = seg(hBody, y0+hBase, new THREE.MeshPhysicalMaterial({ map:oilTexture(color), roughness:.25 }), R*.96);
+  const core = g.userData.core = seg(hBody, y0+hBase, new THREE.MeshPhysicalMaterial({ map:oilTexture(color), roughness:.25 }), R*.96);
   core.rotation.y = -Math.PI/2;
   seg(hBody, y0+hBase, new THREE.MeshPhysicalMaterial({ color:0xffffff, transparent:true, opacity:.08, roughness:.02,
     clearcoat:1, envMapIntensity:2.4, depthWrite:false }), R, true);
@@ -218,15 +366,18 @@ function makeTube(color){
   return g;
 }
 // --- wordmark khổng lồ làm plane trong scene => vật thể có thể nằm TRƯỚC và SAU chữ
-function makeWordmark(text, color){
+function wordmarkTexture(text, color){
   const c = document.createElement('canvas'); c.width = 2048; c.height = 640;
   const g = c.getContext('2d'); g.fillStyle = color;
-  g.font = '900 560px Inter, sans-serif'; g.textAlign='center'; g.textBaseline='middle';
-  g.fillText(text, 1024, 340);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(12, 3.75),
-    new THREE.MeshBasicMaterial({ map:t, transparent:true, depthWrite:false }));
-  return m;
+  // tự thu nhỏ cỡ chữ nếu tên dài để không tràn
+  let size = 560; g.font = `900 ${size}px Inter, sans-serif`;
+  while (g.measureText(text).width > 1960 && size > 120) { size -= 20; g.font = `900 ${size}px Inter, sans-serif`; }
+  g.textAlign='center'; g.textBaseline='middle'; g.fillText(text, 1024, 340);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function makeWordmark(text, color){
+  return new THREE.Mesh(new THREE.PlaneGeometry(12, 3.75),
+    new THREE.MeshBasicMaterial({ map:wordmarkTexture(text, color), transparent:true, depthWrite:false }));
 }
 // --- particle field theo chương (InstancedMesh: 1 draw call)
 function makeParticles(kind, color, n=26){
@@ -251,7 +402,7 @@ function makeBag(){
   const h = new THREE.Mesh(new THREE.TorusGeometry(.7,.04,12,48,Math.PI), new THREE.MeshStandardMaterial({ color:0xd9c3a5 }));
   h.position.y = 1.7;
   const wm = makeWordmark(BRAND.name, BRAND.bagText); wm.scale.setScalar(.22); wm.position.set(0,-.3,.61);
-  g.add(box, h, wm);
+  g.add(box, h, wm); g.userData = { box, wm };
   return g;
 }
 
@@ -276,49 +427,76 @@ gsap.registerPlugin(ScrollTrigger);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const scrub = reduce ? true : 1;   // 1s làm mượt scrub — đây là "cảm giác" cao cấp
 const wipe = document.getElementById('wipe');
+const HERO_SCALE = 1.15;                       // cỡ chai hero trong mỗi chương
+const BAG_DROP = [ {x:2.35, y:1.55, rz:.2, s:.8}, {x:3.2, y:1.8, rz:-.05, s:.8}, {x:4.05, y:1.45, rz:-.2, s:.8} ];                          // vị trí 3 chai khi nằm trong túi
+const BAG_BG = '#f4ece8';
 
-// INTRO -> HERO: dây đứt, 3 tuýp rơi vào bố cục quanh wordmark (1 trước, 1 sau chữ)
-gsap.timeline({ scrollTrigger:{ trigger:'#intro', start:'top top', endTrigger:'#hero', end:'center center', scrub } })
-  .to(S, { swing:0, duration:.2 })
-  .to(S.word, { o:1, s:1, duration:.6, ease:'power2.out' }, .2)
-  .to(S.tubes[0], { x:-3.2, y:.6, z:1.5,  rz:.5,  ry:2, s:1, duration:.8, ease:'power3.inOut' }, .2)
-  .to(S.tubes[1], { x:-.4,  y:.2, z:-1.5, rz:.15, ry:3, duration:.8, ease:'power3.out' }, .3)   // SAU chữ
-  .to(S.tubes[2], { x:2.6,  y:.9, z:2,    rz:-.35,ry:4, duration:.8, ease:'power3.out' }, .4);  // TRƯỚC chữ
+// MỘT master timeline cho mọi thứ dùng chung state S.
+// Nếu nhiều timeline cùng tween một thuộc tính, .to() ghi nhận giá trị bắt đầu ở lần render đầu,
+// nên khi nhảy thẳng vào giữa trang (reload, bấm menu, "cuộn tới chương") vật thể bị kẹt sai chỗ.
+// Một timeline duy nhất được GSAP render tuần tự => vị trí luôn đúng dù nhảy tới đâu.
+const master = gsap.timeline({ defaults:{ ease:'none' } });
+const M = document.documentElement.scrollHeight - innerHeight;   // các section cao theo vh => tỉ lệ không đổi khi resize
+const el = s => document.querySelector(s);
+const topAt    = (s, k) => el(s).offsetTop - innerHeight*k;                          // 'top k%'
+const bottomAt = (s, k) => el(s).offsetTop + el(s).offsetHeight - innerHeight*k;     // 'bottom k%'
+// segment(y0, y1, len): đoạn cuộn y0→y1 (px) ánh xạ vào thời gian cục bộ 0→len
+function segment(y0, y1, len){
+  const a = Math.max(0, y0)/M, span = (Math.min(M, y1) - Math.max(0, y0))/M/len;
+  const T = (vars) => ({ ...vars, duration:(vars.duration ?? .5)*span });
+  return {
+    to:     (target, vars, at) => master.to(target, T(vars), a + at*span),
+    fromTo: (target, from, vars, at) => master.fromTo(target, from, T(vars), a + at*span),
+  };
+}
 
-// mỗi chapter: wipe màu -> đổi nền -> 1 tuýp hero xoay giữa, 2 tuýp kia bay ra; particle trôi parallax
+// INTRO -> HERO: dây đứt, 3 chai rơi vào bố cục quanh wordmark (1 trước, 1 sau chữ)
+{ const sc = segment(0, el('#hero').offsetTop + el('#hero').offsetHeight/2 - innerHeight/2, 1.2);
+  sc.to(S, { swing:0, duration:.2 }, 0);
+  sc.to(S.word, { o:1, s:1, duration:.6, ease:'power2.out' }, .2);
+  sc.to(S.tubes[0], { x:-3.2, y:.6, z:1.5,  rz:.5,  ry:2, s:1, duration:.8, ease:'power3.inOut' }, .2);
+  sc.to(S.tubes[1], { x:-.4,  y:.2, z:-1.5, rz:.15, ry:3, duration:.8, ease:'power3.out' }, .3);   // SAU chữ
+  sc.to(S.tubes[2], { x:2.6,  y:.9, z:2,    rz:-.35,ry:4, duration:.8, ease:'power3.out' }, .4);  // TRƯỚC chữ
+}
+
+// mỗi chapter: 1 chai hero xoay 360°, 2 chai kia bay ra; particle trôi parallax
 CHAPTERS.forEach((c, i) => {
-  const el = `#ch-${c.id}`;
+  const id = `#ch-${c.id}`;
   const heroX = c.side==='right' ? -2.6 : 2.4;
-  // wipe: quét lên rồi quét đi trong 25% đầu của chapter
-  gsap.timeline({ scrollTrigger:{ trigger:el, start:'top bottom', end:'top 25%', scrub:true,
+  const sc = segment(topAt(id, .6), bottomAt(id, 1), 1);
+  sc.to(S.word, { o:0, duration:.1 }, 0);
+  sc.to(S.field, { [i]:1, duration:.15 }, 0);
+  sc.to(S.tubes[i], { x:heroX, y:0, z:2, rx:0, rz:-.25, s:HERO_SCALE, duration:.3, ease:'power2.out' }, 0);
+  sc.to(S.tubes[i], { ry:`+=${Math.PI*2}`, duration:1 }, 0);
+  sc.fromTo(`${id} .card`, { opacity:0 }, { opacity:1, duration:.2 }, .2);
+  sc.to(S.field, { [i]:0, duration:.15 }, .85);
+  tubes.forEach((_, j) => { if (j!==i) sc.to(S.tubes[j], { y: j<i ? 9 : -9, duration:.25, ease:'power2.in' }, 0); });
+
+  // wipe + nền: không dùng chung state với ai => để ScrollTrigger riêng được
+  gsap.timeline({ scrollTrigger:{ trigger:id, start:'top bottom', end:'top 25%', scrub:true,
       onToggle: self => { if (self.isActive) wipe.style.background = c.wipe; } } })
     .fromTo(wipe, { clipPath:'inset(100% 0 0 0)' }, { clipPath:'inset(0% 0 0 0)', duration:.5, ease:'none' })
     .to(wipe, { clipPath:'inset(0 0 100% 0)', duration:.5, ease:'none' });
-
-  ScrollTrigger.create({ trigger:el, start:'top 50%', end:'bottom 50%',
+  ScrollTrigger.create({ trigger:id, start:'top 50%', end:'bottom 50%',
     onToggle: self => { if (self.isActive) document.body.style.backgroundColor = c.bg; } });
-
-  const tl = gsap.timeline({ scrollTrigger:{ trigger:el, start:'top 60%', end:'bottom bottom', scrub } });
-  tl.to(S.word, { o:0, duration:.1 }, 0)
-    .to(S.field, { [i]:1, duration:.15 }, 0)
-    .to(S.tubes[i], { x:heroX, y:0, z:2, rx:0, rz:-.25, s:1.15, duration:.3, ease:'power2.out' }, 0)
-    .to(S.tubes[i], { ry:`+=${Math.PI*2}`, duration:1, ease:'none' }, 0)
-    .fromTo(`${el} .card`, { opacity:0 }, { opacity:1, duration:.2 }, .2)
-    .to(S.field, { [i]:0, duration:.15 }, .85);
-  tubes.forEach((_, j) => { if (j!==i) tl.to(S.tubes[j], { y: j<i ? 9 : -9, duration:.25, ease:'power2.in' }, 0); });
 });
 
-// BAG: túi đi lên, 3 tuýp rơi vào túi, hóa đơn "in" ra
-gsap.timeline({ scrollTrigger:{ trigger:'#bag', start:'top 70%', end:'bottom bottom', scrub,
-    onToggle: s => { if (s.isActive) document.body.style.backgroundColor = '#f4ece8'; } } })
-  .to(S.bag, { y:-.6, ry:-.35, duration:.3, ease:'power3.out' }, 0)
-  .to(S.tubes[0], { x:2.35, y:5, z:0, rx:0, ry:0, rz:.2,  s:.8, duration:.15 }, .3)
-  .to(S.tubes[1], { x:3.2,  y:5, z:0, rx:0, ry:0, rz:-.05, s:.8, duration:.15 }, .35)
-  .to(S.tubes[2], { x:4.05, y:5, z:0, rx:0, ry:0, rz:-.2, s:.8, duration:.15 }, .4)
-  .to(S.tubes[0], { y:1.55, duration:.2, ease:'bounce.out' }, .45)
-  .to(S.tubes[1], { y:1.8, duration:.2, ease:'bounce.out' }, .5)
-  .to(S.tubes[2], { y:1.45, duration:.2, ease:'bounce.out' }, .55)
-  .to('#receipt', { y:'0%', duration:.3, ease:'steps(12)' }, .6);   // steps() = cảm giác máy in
+// BAG: túi đi lên, 3 chai rơi vào túi, hóa đơn "in" ra
+{ const sc = segment(topAt('#bag', .7), M, .9);
+  sc.to(S.bag, { y:-.6, ry:-.35, duration:.3, ease:'power3.out' }, 0);
+  BAG_DROP.forEach((d, j) => {
+    sc.to(S.tubes[j], { x:d.x, y:5, z:0, rx:0, ry:0, rz:d.rz, s:d.s, duration:.15 }, .3 + j*.05);
+    sc.to(S.tubes[j], { y:d.y, duration:.2, ease:'bounce.out' }, .45 + j*.05);
+  });
+  sc.to('#receipt', { y:'0%', duration:.3, ease:'steps(12)' }, .6);   // steps() = cảm giác máy in
+  ScrollTrigger.create({ trigger:'#bag', start:'top 70%', end:'bottom bottom',
+    onToggle: s => { if (s.isActive) document.body.style.backgroundColor = BAG_BG; } });
+}
+master.set({}, {}, 1);   // chốt tổng thời lượng = 1 để progress cuộn ánh xạ 1:1
+ScrollTrigger.create({ start:0, end:'max', scrub, animation:master });
+// intro + hero: trả nền về màu giấy (khi cuộn ngược hoặc nhảy thẳng lên đầu)
+ScrollTrigger.create({ trigger:'#intro', start:'top top', endTrigger:'#hero', end:'bottom 50%',
+  onToggle: s => { if (s.isActive) document.body.style.backgroundColor = ''; } });
 
 /* ======================= 6. RENDER LOOP ======================= */
 const dummy = new THREE.Object3D();
@@ -385,6 +563,147 @@ renderer.setAnimationLoop(() => {
   bag.position.set(3.2*L.xs, S.bag.y, 0); bag.scale.setScalar(Math.max(L.xs, .6)); bag.rotation.y = S.bag.ry + Math.sin(t*.6)*.05;
   renderer.render(scene, camera);
 });
+
+/* ======================= 7. CHẾ ĐỘ SỬA NGAY TRÊN TRANG ======================= */
+// Bấm "Sửa": chữ trên trang thành ô sửa trực tiếp; bảng bên phải đổi giá, tên thương hiệu,
+// màu chai / nền / chuyển cảnh / hạt, ảnh từng tông. 3D cập nhật ngay.
+// "Lưu" ghi vào trình duyệt này (localStorage). "Tải file HTML" xuất một index.html mới chứa nội dung đã sửa.
+const ED = {
+  setTube(i){ const m = tubes[i].userData.core.material; m.map.dispose(); m.map = oilTexture(CHAPTERS[i].tube); m.needsUpdate = true; },
+  setParticle(i){ fields[i].material.color.set(CHAPTERS[i].pColor); },
+  setWordmark(){
+    const m = wordmark.material; m.map.dispose(); m.map = wordmarkTexture(BRAND.name, BRAND.wordmarkColor); m.needsUpdate = true;
+    const w = bag.userData.wm.material; w.map.dispose(); w.map = wordmarkTexture(BRAND.name, BRAND.bagText); w.needsUpdate = true;
+  },
+  setBag(){ bag.userData.box.material.color.set(BRAND.bag); },
+  // nền đang hiển thị: chương nào đang giữa màn hình thì lấy bg của chương đó
+  refreshBg(){
+    const mid = innerHeight/2;
+    CHAPTERS.forEach(c => { const r = document.getElementById('ch-'+c.id).getBoundingClientRect();
+      if (r.top < mid && r.bottom > mid) document.body.style.backgroundColor = c.bg; });
+  },
+};
+let dirty = false;
+const edBtn = document.createElement('button');
+edBtn.id = 'ed-toggle'; edBtn.type = 'button'; edBtn.textContent = '✎ Sửa trang';
+document.body.append(edBtn);
+
+const panel = document.createElement('aside');
+panel.id = 'ed-panel'; panel.setAttribute('aria-label', 'Chỉnh sửa trang');
+const colorRow = (label, k) => `<label class="ed-row"><span>${label}</span><input type="color" data-ed="${k}" value="${getPath(k)}"></label>`;
+const textRow  = (label, k) => `<label class="ed-row ed-col"><span>${label}</span><input type="text" data-ed="${k}" value="${esc(getPath(k))}"></label>`;
+panel.innerHTML = `
+  <header><b>Chỉnh sửa trang</b><button type="button" data-act="close" aria-label="Đóng">✕</button></header>
+  <p class="ed-tip">Bấm trực tiếp vào chữ trên trang để sửa. Màu, giá và ảnh sửa ở đây.</p>
+  <details open><summary>Thương hiệu & giá</summary>
+    ${textRow('Chữ lớn 3D', 'brand.name')}
+    ${textRow('Giá', 'brand.price')}
+    ${textRow('Tài khoản (thẻ ảnh)', 'brand.handle')}
+    ${colorRow('Màu chữ lớn', 'brand.wordmarkColor')}
+    ${colorRow('Màu túi', 'brand.bag')}
+    ${colorRow('Màu chữ trên túi', 'brand.bagText')}
+  </details>
+  ${CHAPTERS.map((c, i) => `
+  <details><summary data-sum="${i}">${esc(c.title)}</summary>
+    ${colorRow('Màu son (chai 3D)', `chapters.${i}.tube`)}
+    ${colorRow('Màu nền', `chapters.${i}.bg`)}
+    ${colorRow('Màu chuyển cảnh', `chapters.${i}.wipe`)}
+    ${colorRow('Màu hạt bay', `chapters.${i}.pColor`)}
+    <label class="ed-row ed-col"><span>Ảnh sản phẩm</span><input type="file" accept="image/*" data-img="${i}"></label>
+    <button type="button" class="ed-link" data-go="${i}">Cuộn tới chương này ↓</button>
+  </details>`).join('')}
+  <footer>
+    <p class="ed-status" aria-live="polite"></p>
+    <button type="button" data-act="save" class="ed-primary">Lưu</button>
+    <button type="button" data-act="export">Tải file HTML</button>
+    <button type="button" data-act="reset" class="ed-danger">Khôi phục mặc định</button>
+  </footer>`;
+document.body.append(panel);
+const status = panel.querySelector('.ed-status');
+const say = (msg) => { status.textContent = msg; };
+const markDirty = () => { dirty = true; say('Có thay đổi chưa lưu.'); };
+
+function setEditing(on){
+  document.body.classList.toggle('editing', on);
+  edBtn.textContent = on ? '✓ Xong' : '✎ Sửa trang';
+  document.querySelectorAll('[data-k]').forEach(el => {
+    if (on) { try { el.contentEditable = 'plaintext-only'; } catch { el.contentEditable = 'true'; } el.spellcheck = false; }
+    else el.removeAttribute('contenteditable');
+  });
+}
+edBtn.addEventListener('click', () => setEditing(!document.body.classList.contains('editing')));
+
+// sửa chữ trực tiếp
+document.addEventListener('input', e => {
+  const el = e.target.closest?.('[data-k][contenteditable]'); if (!el) return;
+  const v = el.hasAttribute('data-multi') ? el.innerText.replace(/\n+$/, '') : el.textContent;
+  setPath(el.dataset.k, v);
+  // cùng một khoá có thể hiện ở nhiều chỗ (vd. nút "Thêm vào giỏ" ở cả 3 chương)
+  document.querySelectorAll(`[data-k="${el.dataset.k}"]`).forEach(o => { if (o !== el) o.textContent = v; });
+  if (/^chapters\.\d+\.title$/.test(el.dataset.k)) {
+    const i = +el.dataset.k.split('.')[1]; panel.querySelector(`[data-sum="${i}"]`).textContent = v;
+  }
+  fillDerived(); markDirty();
+});
+// Enter = xuống dòng chỉ ở tiêu đề nhiều dòng; chỗ khác thì thoát ô
+document.addEventListener('keydown', e => {
+  const el = e.target.closest?.('[data-k][contenteditable]');
+  if (el && e.key === 'Enter' && !el.hasAttribute('data-multi')) { e.preventDefault(); el.blur(); }
+});
+// không cho nút CTA / liên kết hoạt động khi đang sửa
+document.addEventListener('click', e => { if (document.body.classList.contains('editing') && e.target.closest('.cta')) e.preventDefault(); }, true);
+
+// bảng màu & ô nhập
+panel.addEventListener('input', e => {
+  const k = e.target.dataset.ed; if (!k) return;
+  setPath(k, e.target.value);
+  const m = k.match(/^chapters\.(\d+)\.(\w+)$/);
+  if (m) {
+    const i = +m[1];
+    if (m[2] === 'tube') ED.setTube(i);
+    if (m[2] === 'pColor') ED.setParticle(i);
+    if (m[2] === 'bg') ED.refreshBg();
+    if (m[2] === 'wipe') { wipe.style.background = e.target.value; }
+  } else {
+    if (k === 'brand.name' || k === 'brand.wordmarkColor' || k === 'brand.bagText') ED.setWordmark();
+    if (k === 'brand.bag') ED.setBag();
+  }
+  fillDerived(); markDirty();
+});
+// đổi ảnh: đọc thành data URL để còn lưu / xuất được
+panel.addEventListener('change', e => {
+  const i = e.target.dataset.img; if (i === undefined) return;
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { CHAPTERS[i].img = r.result; fillDerived(); markDirty(); };
+  r.readAsDataURL(f);
+});
+panel.addEventListener('click', e => {
+  const go = e.target.dataset.go;
+  if (go !== undefined) {
+    const el = document.getElementById('ch-' + CHAPTERS[go].id);
+    scrollTo({ top: el.offsetTop + innerHeight * .9, behavior: 'smooth' });
+  }
+  const act = e.target.dataset.act;
+  if (act === 'close') setEditing(false);
+  if (act === 'save') {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(CONTENT)); dirty = false; say('Đã lưu trong trình duyệt này.'); }
+    catch { say('Không lưu được (có thể do ảnh quá lớn). Hãy dùng "Tải file HTML".'); }
+  }
+  if (act === 'export') {
+    const json = JSON.stringify(CONTENT, null, 1).replace(/<\//g, '<\\/');
+    const html = PAGE_SOURCE.replace(/(<script id="content" type="application\/json">)[\s\S]*?(<\/script>)/, `$1\n${json}\n$2`);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([html], { type:'text/html' }));
+    a.download = 'index.html'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    say('Đã tải file. Đặt cạnh thư mục img/ để ảnh mặc định hiển thị.');
+  }
+  if (act === 'reset' && confirm('Xoá mọi chỉnh sửa và quay về nội dung gốc?')) {
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    dirty = false; location.reload();
+  }
+});
+addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 </script>
 </body>
 </html>

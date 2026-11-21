@@ -37,6 +37,14 @@ cảnh "cho vào giỏ". Mẫu khởi đầu chạy được ngay nằm ở `ass
   `S`*, và vòng `renderer.setAnimationLoop` đọc `S` mỗi frame rồi cộng thêm các chuyển động
   idle (bồng bềnh, lắc, parallax theo chuột). Không bao giờ set `mesh.position` trong callback
   của scroll.
+- **Chỉ MỘT master timeline cho mọi tween ghi vào `S`.** Gắn nó vào một ScrollTrigger duy nhất
+  (`start:0, end:'max'`). Mỗi cảnh được đặt vào master qua `segment(y0, y1, len)` (đổi px cuộn
+  thành vị trí trên timeline), và cuối cùng phải có `master.set({}, {}, 1)`. Nếu mỗi cảnh dùng
+  một ScrollTrigger riêng cùng tween `S.tubes[j]` hoặc `S.word`, thì `.to()` ghi nhận giá trị bắt
+  đầu ở lần render đầu, nên khi reload giữa trang hoặc nhảy tới một chương, vật thể bị kẹt sai
+  chỗ. Wipe và đổi nền thì không dùng chung state nên vẫn để ScrollTrigger riêng được. Nhớ có
+  một trigger trả nền về màu giấy cho intro/hero. Khi kiểm tra, phải chụp cả trường hợp
+  **nhảy cóc** (cuộn tới các mốc theo thứ tự lộn xộn), không chỉ cuộn tuần tự.
 - **Wordmark khổng lồ là một plane Three.js** dùng CanvasTexture (`depthWrite:false`), không
   phải chữ DOM. Nhờ vậy có thể đặt một vật thể ở `z<0` (sau chữ) và một vật thể ở `z>0`
   (trước chữ). Đây là hiệu ứng tạo cảm giác "3D thật".
@@ -84,6 +92,24 @@ cảnh "cho vào giỏ". Mẫu khởi đầu chạy được ngay nằm ở `ass
 - **Khi người dùng gửi ảnh sản phẩm thật:** lấy tỉ lệ các khối (nắp/đai/thân/đế) và màu từ ảnh
   để dựng mô hình procedural, rồi đặt chính các ảnh đó vào thẻ social proof thay cho ảnh mẫu.
 - Tên có gạch nối (sô-cô-la) sẽ bị ngắt dòng ở dấu "-" khi dùng headline to. Hãy dùng U+2011.
+
+## Chế độ sửa ngay trên trang (khi người dùng muốn tự chỉnh)
+
+Xem bản đã làm trong `ayra-studio/index.html` (phần "7. CHẾ ĐỘ SỬA"). Cách làm:
+
+- **Nội dung:** toàn bộ nội dung nằm trong `<script id="content" type="application/json">`.
+- **Gắn chữ vào nội dung:** DOM được dựng từ JSON, mỗi chữ gắn `data-k="đường.dẫn"`. Bấm
+  "Sửa" thì các chữ này thành `contenteditable` (`plaintext-only`, có dự phòng `true`). Giá trị
+  được ghi lại vào JSON, và mọi chỗ khác có cùng khoá cũng được cập nhật theo.
+- **Không dựng lại các section** khi sửa, vì làm vậy sẽ mất các ScrollTrigger: chỉ cập nhật
+  chữ và thuộc tính tại chỗ.
+- **Bảng bên phải (bottom sheet trên điện thoại):** gồm các ô chọn màu, giá và ảnh (đọc bằng
+  FileReader thành data URL). Đổi màu chai thì tạo lại texture của lõi. Đổi chữ lớn thì tạo
+  lại texture của wordmark. Đổi màu nền/wipe thì sửa thẳng vào object chương (ScrollTrigger
+  đọc giá trị mới ngay).
+- **Lưu và xuất file:** "Lưu" ghi vào localStorage (bọc try/catch, vì ảnh lớn có thể vượt hạn
+  mức). "Tải file HTML" lấy mã nguồn trang đã chụp lúc tải (`PAGE_SOURCE`, chụp trước khi JS
+  sửa DOM), thay khối JSON bằng nội dung mới rồi cho tải xuống. "Khôi phục" xoá bản lưu.
 - Khi làm trang cho đại lý bán sản phẩm của hãng khác: thương hiệu trên trang là của cửa hàng,
   không dùng logo của hãng trên mô hình 3D, và thêm dòng ghi chú nhãn hiệu ở cuối trang.
 - `prefers-reduced-motion`: tắt wipe, tắt idle và dùng `scrub:true`.
