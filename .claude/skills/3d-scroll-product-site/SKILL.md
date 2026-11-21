@@ -71,8 +71,16 @@ cảnh "cho vào giỏ". Mẫu khởi đầu chạy được ngay nằm ở `ass
 - Quên `renderer.outputColorSpace = SRGBColorSpace` và `texture.colorSpace = SRGBColorSpace`
   thì màu sẽ bị nhạt.
 - Material cần `transparent:true` thì `opacity` mới có tác dụng.
-- Trên màn hình dọc (mobile) phải lùi camera (`z /= aspect`) và ẩn thẻ social. Hãy chụp
-  kiểm tra ở 390×844.
+- **Màn hình dọc (mobile):** nếu chỉ lùi camera thì wordmark và túi vẫn tràn khỏi mép. Template
+  dùng `L.xs` (tỉ lệ nửa bề ngang nhìn thấy so với ≈7 đơn vị của desktop) để nén mọi toạ độ x,
+  scale wordmark và túi. Hạ `camera.position.y` (khoảng -1.8) để vật thể nằm nửa trên, còn
+  chữ DOM dồn xuống nửa dưới (`justify-content:flex-end`). Thẻ social bị ẩn. Luôn chụp kiểm tra ở 390×844.
+- **Tiếng Việt:** `line-height:.85` khiến dấu dưới (ọ, ậ) dính vào dấu trên của dòng sau (ú, à)
+  và trông như bị mất dấu. Với headline nhiều dòng, dùng `line-height` ≥ 1.05.
+- Vật liệu kim loại (nắp son) cần `scene.environment` (RoomEnvironment + PMREM), nếu không sẽ
+  bị đen. Khi import `three/addons/` thì phải thêm khoá này vào importmap.
+- Khi làm trang cho đại lý bán sản phẩm của hãng khác: thương hiệu trên trang là của cửa hàng,
+  không dùng logo của hãng trên mô hình 3D, và thêm dòng ghi chú nhãn hiệu ở cuối trang.
 - `prefers-reduced-motion`: tắt wipe, tắt idle và dùng `scrub:true`.
 - Chỉ nạp CDN có pin phiên bản: `three@0.160.0` (importmap, jsdelivr) và `gsap 3.12.5` (cdnjs).
 

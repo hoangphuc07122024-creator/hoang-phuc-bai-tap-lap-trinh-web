@@ -72,7 +72,9 @@
   .receipt .big{font-size:26px;font-weight:800;text-align:center}
   .receipt .bar{height:28px;margin:8px 0;background:repeating-linear-gradient(90deg,#222 0 2px,#fff 2px 4px,#222 4px 5px,#fff 5px 8px)}
 
-  @media (max-width:640px){ nav ul{display:none} .card{display:none} .receipt{left:16px;width:120px} }
+  @media (max-width:640px){ nav ul{display:none} .card{display:none}
+    .chapter .pin,#bag .pin{justify-content:flex-end;padding-bottom:72px} .chapter.right .pin{align-items:flex-start;text-align:left}
+    .chapter.right .chips{justify-content:flex-start} #bag .copy{margin-left:0!important} .receipt{left:16px;width:120px} }
   @media (prefers-reduced-motion:reduce){ #wipe{display:none} }
 </style>
 </head>
@@ -282,11 +284,17 @@ const dummy = new THREE.Object3D();
 const mouse = { x:0, y:0 };
 addEventListener('pointermove', e => { mouse.x = e.clientX/innerWidth-.5; mouse.y = e.clientY/innerHeight-.5; });
 
+// LAYOUT: bố cục 3D được thiết kế cho màn ngang (nửa bề ngang nhìn thấy ≈ 7 đơn vị ở z=0).
+// Màn dọc: lùi camera một chút, nén mọi toạ độ x theo L.xs, và hạ camera để vật thể nằm nửa trên
+// (chữ DOM nằm nửa dưới, xem media query).
+const L = { xs:1 };
 function resize(){
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h, false); camera.aspect = w/h;
-  // màn dọc: lùi camera để giữ bố cục
-  camera.position.z = w/h < 1 ? 14 / Math.max(w/h, .5) * .75 : 14;
+  const w = innerWidth, h = innerHeight, a = w/h;
+  renderer.setSize(w, h, false); camera.aspect = a;
+  camera.position.z = a < 1 ? 18 : 14;
+  camera.position.y = a < 1 ? -1.8 : 0;
+  const halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov/2)) * camera.position.z * a;
+  L.xs = Math.min(1, halfW / 7.06);
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -300,24 +308,24 @@ renderer.setAnimationLoop(() => {
   tubes.forEach((m, i) => {
     const p = S.tubes[i];
     const idle = reduce ? 0 : Math.sin(t*.8 + i*2) * .08;      // bồng bềnh nhẹ
-    m.position.set(p.x + mouse.x*.3*(p.z*.3), p.y + idle, p.z);
+    m.position.set(p.x*L.xs + mouse.x*.3*(p.z*.3), p.y + idle, p.z);
     m.rotation.set(p.rx + mouse.y*.2, p.ry, p.rz + (i===0 ? sway : 0));
-    m.scale.setScalar(p.s);
+    m.scale.setScalar(p.s * Math.max(L.xs, .7));
   });
   // con lắc: tuýp 0 treo dưới điểm neo phía trên màn hình
-  const L = 7, p0 = S.tubes[0];
-  tubes[0].position.x += Math.sin(sway) * L;
-  tubes[0].position.y += (1 - Math.cos(sway)) * L;
+  const LEN = 7, p0 = S.tubes[0];
+  tubes[0].position.x += Math.sin(sway) * LEN;
+  tubes[0].position.y += (1 - Math.cos(sway)) * LEN;
   string.visible = S.swing > .01;
   string.material.opacity = S.swing;
-  const top = new THREE.Vector3(p0.x, p0.y + 1.9 + L, p0.z);
+  const top = new THREE.Vector3(p0.x*L.xs, p0.y + 1.9 + LEN, p0.z);
   const end = new THREE.Vector3(tubes[0].position.x, tubes[0].position.y + 1.9, p0.z);
   string.position.copy(top).add(end).multiplyScalar(.5);
   string.scale.y = top.distanceTo(end) / 10;
   string.rotation.z = Math.atan2(end.x - top.x, top.y - end.y);
 
   wordmark.material.opacity = S.word.o;
-  wordmark.scale.setScalar(S.word.s);
+  wordmark.scale.setScalar(S.word.s * L.xs);
   wordmark.visible = S.word.o > .01;
 
   fields.forEach((f, i) => {
@@ -325,7 +333,7 @@ renderer.setAnimationLoop(() => {
     if (!f.visible) return;
     f.userData.seeds.forEach((s, j) => {
       const drift = reduce ? 0 : t*.15*s.sp;
-      dummy.position.set(s.x + mouse.x*s.z*.4, ((s.y + drift*3 + 4.5) % 9) - 4.5 - (1-k)*8, s.z);
+      dummy.position.set(s.x*L.xs + mouse.x*s.z*.4, ((s.y + drift*3 + 4.5) % 9) - 4.5 - (1-k)*8, s.z);
       dummy.rotation.set(s.r + t*.3*s.sp, s.r*2 + t*.2, s.r);
       dummy.scale.setScalar(s.s * k);
       dummy.updateMatrix(); f.setMatrixAt(j, dummy.matrix);
@@ -333,7 +341,7 @@ renderer.setAnimationLoop(() => {
     f.instanceMatrix.needsUpdate = true;
   });
 
-  bag.position.set(3.2, S.bag.y, 0); bag.rotation.y = S.bag.ry + Math.sin(t*.6)*.05;
+  bag.position.set(3.2*L.xs, S.bag.y, 0); bag.scale.setScalar(Math.max(L.xs, .6)); bag.rotation.y = S.bag.ry + Math.sin(t*.6)*.05;
   renderer.render(scene, camera);
 });
 </script>
